@@ -6,11 +6,4 @@ scikit-learn==1.0.2
 patsy==0.5.2
 protobuf==3.19.6
 keras-tuner==1.1.3
-ipykernel==6.22.0
-## for ML
 xgboost==2.0.0
-##for doit
-graphviz==0.20
-doit==0.36.0
-pygraphviz==1.9
-import_deps==0.2.0
