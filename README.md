@@ -66,3 +66,8 @@ tar_make()
 ## Example code 2: Genomic prediction for genotypic values within environments
 
 ## Example code 3: Generating feature importance scores for core set
+
+## License
+
+This project is licensed under the MIT License.  
+See the [LICENSE](LICENSE) file for full details.
