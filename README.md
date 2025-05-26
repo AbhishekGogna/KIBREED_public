@@ -28,3 +28,9 @@ Rscript setup.R
 Notes
 1. Run all commands from the project root directory.
 2. If you get version mismatch errors, ensure the correct versions are installed and available in your $PATH.
+
+## Example code 1: Genomic prediction for genotypic values averaged across environments
+
+## Example code 2: Genomic prediction for genotypic values within environments
+
+## Example code 3: Generating feature importance scores for core set
