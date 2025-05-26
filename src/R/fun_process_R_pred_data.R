@@ -1237,38 +1237,3 @@ change_job_meta_data <- function(data, new_time,
   out[["log_file"]] <- log_file
   out[["change_log"]] <- out
 }
-
-# Make plots 
-#plot_5f_str <- ggplot(pred_data_acc %>% 
-#                        filter(grepl("cv_acr_5f|cv_acr_str", run_type, perl = TRUE),
-#                               val_type == "cor_val"), 
-#                      aes(x = run_type, y = value, color = Type)) + # for str calculate correlation in groups of series?
-#  geom_boxplot() +
-#  theme_classic(base_size = 11) +
-#  coord_cartesian(ylim = c(0, 1))
-#
-##plot_sce <- ggplot(pred_data_acc %>% filter(grepl("cv_acr_sce", run_type, perl = TRUE)), 
-##                      aes(x = run_type, y = value, color = Type)) +
-##  geom_boxplot() +
-##  facet_wrap(~val_type, scales = "free") + 
-##  theme_classic(base_size = 11)
-#
-#wtn_data <- pred_data_acc %>% 
-#  filter(grepl("cv_wtn_5f", run_type, perl = TRUE),
-#         val_type == "cor_val") %>%
-#  mutate(run_id = gsub("(run\\_\\d+)\\_(cv\\d)", "\\1", run_idx, perl = TRUE),
-#         cv_id = gsub("(run\\_\\d+)\\_(cv\\d)", "\\2", run_idx, perl = TRUE)) %>%
-#  convert(fct(cv_id))
-#
-#wtn_data_means <- wtn_data %>%
-#  aggregate(value ~ run_type + model_idx + cv_id + Type, ., function(i) round(mean(i), 3)) %>%
-#  convert(fct(run_type, model_idx, cv_id, Type))
-#
-#plot_wtn <- ggplot(wtn_data, aes(x = model_idx, y = value, color = Type)) +
-#  geom_boxplot() +
-#  coord_cartesian(ylim = c(0,1)) +
-#  facet_wrap(~cv_id, scales = "free") + 
-#  theme_classic(base_size = 11)+
-#  geom_hline(yintercept = 0, linetype = "dashed", color = "red")+
-#  geom_hline(yintercept  = 0.5, linetype ="dashed", color = "blue")+
-#  geom_text(aes(label = value, y = 0.1), data = wtn_data_means, angle = 90, size = 3, position = position_dodge(1), show.legend = FALSE)
