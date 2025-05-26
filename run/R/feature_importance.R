@@ -95,35 +95,4 @@ list(
                              data = predicted_data)
     
   )
-  #, tar_target(
-  #  name = overviews,
-  #  command = make_overview_plots(existing_data = data_paths,
-  #                                data1 = RD_data,
-  #                                data2 = core_set,
-  #                                data3 = env_clusters,
-  #                                data4 = feature_importance,
-  #                                data5 = training_data_2)
-  #)
 )
-
-# identify best and worst performers per environment cluster
-#core_dist_series <- core_set$core_dist_series
-##write.csv2(core_dist_series, "/proj/tmp_data/core_dist_series.csv", row.names = F, quote = T)
-#per_series <- core_dist_series %>% select(-freq_env_class, -total) %>% as.matrix()
-#per_series_sum <- colSums(per_series, na.rm = T)
-#per_series_sum[order(per_series_sum, decreasing = T)]
-
-## how many of the core set are in the extremes
-#dist_plot <- core_set$core_ext_plot
-#ggsave(plot = dist_plot,
-#       filename = sprintf("%s/dist_plot.png", "/proj/results/R/feature_importance"), 
-#       width = 8.4, height = 8.4, dpi = 600, units = "cm")
-#
-# a possible line plot
-#data <- predicted_data[["predicted_data"]][["pred"]]%>% filter(is.na(set)) 
-#to_color <- data %>% filter(geno %in% c("zf003zm027", "hystarhystar"))
-#data %>% 
-#  ggplot(aes(x = env, y = pred, group = geno)) +
-#  geom_line() +
-#  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
-#  geom_line(aes(x = env, y = pred, group = geno, color = "red"), data = to_color)  
