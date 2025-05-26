@@ -1,5 +1,4 @@
 tensorflow==2.8.4
-tensorboard==2.8.4
 pyarrow==5.0.0
 matplotlib==3.5.1
 pandas==1.4
