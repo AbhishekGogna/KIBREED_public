@@ -1,3 +1,4 @@
+#!/bin/bash
 set -e  # Exit on first error
 
 PROJECT_DIR="$(pwd)"
@@ -6,6 +7,18 @@ FREEZE_FILE="$PROJECT_DIR/pip_freeze.txt"
 PIP="$VENV_DIR/bin/pip"
 
 echo "📁 Working directory: $PROJECT_DIR"
+
+# Step 0: Check Python version
+PYTHON_VERSION_FULL=$(python3 -c 'import sys; print(".".join(map(str, sys.version_info[:3])))')
+PYTHON_MAJOR=$(python3 -c 'import sys; print(sys.version_info[0])')
+PYTHON_MINOR=$(python3 -c 'import sys; print(sys.version_info[1])')
+
+if (( PYTHON_MAJOR < 3 )) || (( PYTHON_MAJOR == 3 && PYTHON_MINOR < 8 )); then
+  echo "❌ Python 3.8 or higher is required. Found Python $PYTHON_VERSION_FULL"
+  exit 1
+elif (( PYTHON_MAJOR > 3 )) || (( PYTHON_MAJOR == 3 && PYTHON_MINOR > 8 )); then
+  echo "⚠️  Warning: Detected Python $PYTHON_VERSION_FULL. This project was tested with Python 3.8.11"
+fi
 
 # Step 1: Check if freeze file exists
 if [[ ! -f "$FREEZE_FILE" ]]; then
