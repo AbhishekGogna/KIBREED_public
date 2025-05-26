@@ -18,12 +18,16 @@ This script creates a virtual environment named py_env and installs all required
 ./setup_py.sh
 ```
 
+Once this is done you can activate your environment with source /path/to/KIBREED_public/py_env/bin/activate
+
 3. Set up R environment
 This script restores the R package environment using renv and the renv.lock file.
 
 ```bash
 Rscript setup.R
 ```
+
+Once this is done your environment should be activated when you enter R
 
 Notes
 1. Run all commands from the project root directory.
