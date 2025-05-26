@@ -1,0 +1,12 @@
+generate_prediction_data:
+  script: /proj/run/R/generate_prediction_data.R
+  store: /proj/store/generate_prediction_data
+process_R_pred_data:
+  script: /proj/run/R/process_R_pred_data.R
+  store: /proj/store/process_R_pred_data
+get_vars:
+  script: /proj/run/R/get_vars.R
+  store: /proj/store/get_vars
+feature_importance:
+  script: /proj/run/R/feature_importance.R
+  store: /proj/store/feature_importance
