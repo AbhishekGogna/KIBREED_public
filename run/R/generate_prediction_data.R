@@ -44,11 +44,6 @@ acr_models <- data.frame(models = paste0("M_", 1:length(models_acr)),
                          memory = c(50, 50, 70),
                          time = "1-0:0:0")
 
-#"ERM_l@BRR&ERM_nl@BRR&G_a@BRR&G_d@BRR&G_aa@BRR&G_a_ERM_l@RKHS&G_a_ERM_nl@RKHS&G_d_ERM_l@RKHS&G_d_ERM_nl@RKHS",#omit
-#"ERM_nl@BRR&G_a@BRR&G_d@BRR&G_aa@BRR&G_a_ERM_nl@RKHS&G_d_ERM_nl@RKHS", #omit
-#"ERM_l@BRR&G_a@BRR&G_d@BRR&G_aa@BRR&G_a_ERM_l@RKHS&G_d_ERM_l@RKHS", #omit
-#"E_i@BRR&G_a@BRR&G_d@BRR", #omit
-
 # wtn models
 models_wtn <- c("E_i@BRR&G_i@BRR", # M_1
                 "E_i@BRR&G_a@BRR&G_d@BRR&G_aa@BRR", #M_2
@@ -62,21 +57,12 @@ models_wtn <- c("E_i@BRR&G_i@BRR", # M_1
                 "S_al@BRR&Y@BRR&G_a@BRR&G_d@BRR&G_a_S_al@RKHS&G_a_Y@RKHS&G_a_ERM_l@RKHS" #M_10
                 )
 
-#to_run <- data.frame(model = models_wtn[1:6], cv = rep(paste0("cv", 1:4, "_tra"), each = 6))
-#to_run_2 <- data.frame(model = models_wtn[c(1:7, 8)], cv = rep(paste0("cv1_tra"), times = 2))
-#to_run_3 <- data.frame(model = models_wtn[c(1:7, 9)], cv = rep(paste0("cv3_tra"), times = 2))
-#to_run_5 <- data.frame(model = models_wtn[c(1:7)], cv = rep(paste0("cv2_Lo0"), times = 7)) #cv2
-#to_run_4 <- data.frame(model = models_wtn[c(1:7, 10)], cv = rep(paste0("cv4_cvL"), times = 4)) #cv4
-#
-#to_run<- bind_rows(to_run, to_run_2, to_run_3, to_run_4, to_run_5) %>% distinct()
-
 wtn_models <- data.frame(models =  paste0("M_", 1:length(models_wtn)),
                          model_specs = models_wtn,
                          cpu = sapply(models_wtn, function(x) length(strsplit(x, "&")[[1]]), USE.NAMES = F),
                          mem = c(30, 50, 100, 200, 100, 200, 200, 200, 200,200),
                          time = "2-0:0:0")
 
-# todo: rewrite the log file if the process is rerun from the top
 # define pipeline
 list(
   tar_target(
@@ -188,26 +174,4 @@ list(
                                    wtn = TRUE,
                                    reservation = NULL)
   )
-  #,
-  #tar_target(
-  #  name = cv_wtn_trsz_data, #tr-training, sz-size
-  #  command = cv_wtn_trsz(data = pred_wtn_objects, runs = 20, test_prop = 0.33)
-  #),
-  #tar_target(
-  #  name = run_scripts_wtn_trsz,
-  #  command = generate_run_scripts(data = cv_wtn_trsz_data,
-  #                                 run_script_at = c(sprintf("%s/scr_genomic_prediction_wtn.R", core_paths[["src_R"]])),
-  #                                 input_data_at = c(sprintf("%s", core_paths[["results_R"]])),
-  #                                 model_info = wtn_models[c(1, 2), ],
-  #                                 wtn = TRUE,
-  #                                 reservation = NULL)
-  #)
 )
-#paths <- unique(sapply(run_scripts_wtn_5f$run_data$run_data, function(x) x[["run_scripts"]]))
-#path_files <- unique((sapply(paths, function(x) list.files(x, full.names = T))))
-#for (i in path_files) {
-#  file <- readLines(i)
-#  file[grepl('ext_lib_blas="/qg-10/', file)] <- "ext_lib_blas=\"/qg-10/data/AGR-QG/Gogna/computing_containers/openblas_3.23/inst/qg-10.ipk-gatersleben.de/lib/libopenblas.so\""
-#  cat(file, file = i, sep = "\n")
-#  system(sprintf("chmod +x %s", i))
-#}
