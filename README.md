@@ -80,14 +80,14 @@ tar_make(names = "target_name") # from names in tar_manifest
 
 ## Example code 1: Genomic prediction for genotypic values averaged across environments
 project "generate_prediction_data" generates the files needed for genomic predictions.
-you need to run the files to generate the output, which is stored in /proj/results
-project "process_R_pred_data" processes the output and generates the figures. 
-project "get_vars" shows how variances were calculated. it also generates corresponding figures. 
+  you need to run the files to generate the output, which is stored in /proj/results
+project "process_R_pred_data" processes the output and generates the figures.
+project "get_vars" shows how variances were calculated. it also generates corresponding figures.
 
 ## Example code 2: Genomic prediction for genotypic values within environments
 project "generate_prediction_data" generates the files needed for genomic predictions.
-you need to run the files to generate the output, which is stored in /proj/results
-project "process_R_pred_data" Processes the output and generates the figures. 
+  you need to run the files to generate the output, which is stored in /proj/results
+project "process_R_pred_data" Processes the output and generates the figures.
 
 ## License
 
