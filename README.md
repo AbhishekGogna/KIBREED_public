@@ -76,12 +76,27 @@ tar_make(names = "target_name") # from names in tar_manifest
 
 ## Example code 1: Genomic prediction for genotypic values averaged across environments
 
-**generate_prediction_data** - Generates files for genomic predictions. Output stored in `/proj/results`.
-    you need to run the files to generate the output, which is stored in /proj/results
+**generate_prediction_data**
+
+Generates files for genomic predictions with output stored in `/proj/results/R/generate_prediction_data/cv_acr*`
+
+### Output Files
+
+**cv_acr_5f.json** -  Stores train/test splits data
+
+**eigen_data** - Has eigen decompositions used for predicitons
+
+**master_files** -  R scripts required for running predictions (must be executed to generate output)
+
+**run_data** - Directories for storing prediction results
 
 **process_R_pred_data** - Processes prediction output and generates figures.
 
 **get_vars** - Calculates variances and generates corresponding figures.
+
+**process_R_pred_data**
+
+Processes prediction output and generates visualization figures.
 
 ## Example code 2: Genomic prediction for genotypic values within environments
 
