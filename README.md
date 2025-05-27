@@ -1,41 +1,53 @@
 # KIBREED
 
-This project requires R 4.0.5 and Python 3.8.11 with specific package environments managed by lock files.
+A genomic prediction project for plant breeding applications using R and Python environments with specific version requirements.
 
-## Steps to set up the working environments. 
+## Prerequisites
 
-1. Check R and Python versions
-Make sure you have R 4.0.5 and Python 3.8.11 installed and configured, likely by adding their paths to .bashrc
+- **R**: Version 4.0.5
+- **Python**: Version 3.8.11
+
+## Environment Setup
+
+### 1. Verify Language Versions
+
+Ensure R 4.0.5 and Python 3.8.11 are installed and properly configured in your PATH (likely by adding their paths to `.bashrc`).
 
 ```bash
 ./check_Langs.sh
 ```
 
-2. Set up Python environment
-This script creates a virtual environment named py_env and installs all required Python packages from pyenv.lock.
+### 2. Python Environment Setup
+
+Create a virtual environment named `py_env` and install all required Python packages from `pyenv.lock`:
 
 ```bash
 ./setup_py.sh
 ```
 
-Once this is done you can activate your environment with source /path/to/KIBREED_public/py_env/bin/activate
+**Activate the environment:**
+```bash
+source /path/to/KIBREED_public/py_env/bin/activate
+```
 
-3. Set up R environment
-This script restores the R package environment using renv and the renv.lock file.
+### 3. R Environment Setup
+
+Restore the R package environment using `renv` and the `renv.lock` file:
 
 ```bash
 Rscript setup.R
 ```
 
-Once this is done your environment should be activated when you enter R
+Once completed, your R environment will be automatically activated when you start R.
 
-Notes
-1. Run all commands from the project root directory.
-2. If you get version mismatch errors, ensure the correct versions are installed and available in your $PATH.
+### Setup Notes
 
-4. Running R subprojects using {targets}
+- Run all commands from the project root directory
+- If you encounter version mismatch errors, ensure the correct versions are installed and available in your `$PATH`
 
-Once the environment is set up, you can start R and run subprojects using the {targets} pipeline system.
+## Running R Subprojects with {targets}
+
+After environment setup, use the {targets} pipeline system to run subprojects:
 
 ```r
 # Start R
@@ -44,97 +56,94 @@ R
 # Set basic directory structure
 project_path <- "/proj" 
 
-# Please note that each sub projects tries to run from /proj root directory. This 
-#is mapped to KIBREED_public. You may need to modify run scripts accordingly. 
+# Note: Each subproject runs from /proj root directory, mapped to KIBREED_public
+# You may need to modify run scripts accordingly
 
+# Create required directories
 dirs <- c("results/R", "results/Py", "logs/R", "logs/Py", "tmp_data/R", "tmp_data/Py")
 sapply(file.path(project_path, dirs), function(x) {
   if (!dir.exists(x)) dir.create(x, recursive = TRUE)
 })
 
-# Run sub projects
+# View available subprojects
 proj_list <- names(yaml::read_yaml("_targets.yaml"))
-# [1] "generate_prediction_data" "process_R_pred_data"
-# [3] "get_vars"  [4] "feature_importance"
+# Available projects: "generate_prediction_data", "process_R_pred_data", "get_vars", "feature_importance"
 
-# Set the subproject you want to run
+# Set the subproject to run
 Sys.setenv("TAR_PROJECT" = proj_list[1])
 
-# Load the targets package
+# Load targets package
 library(targets)
 
 # View planned targets
-tar_manifest() # each name is a target to be run
+tar_manifest() # Each name is a target to be run
 
-# Run the sub project pipeline completely
+# Run complete pipeline
 tar_make() 
 
-# Run the sub project pipeline one target at a time
-tar_make(names = "target_name") # from names in tar_manifest
-
+# Run specific target
+tar_make(names = "target_name") # Use names from tar_manifest()
 ```
 
-## Example code 1: Genomic prediction for genotypic values averaged across environments
+## Analysis Examples
 
-**generate_prediction_data**
+### Example 1: Genomic Prediction Across Environments
 
-Generates files for genomic predictions with output stored in `/proj/results/R/generate_prediction_data/cv_acr*`
+**Project:** `generate_prediction_data`
 
-### Output Files
+Generates files for genomic predictions with genotypic values averaged across environments.
 
-**cv_acr_5f.json** -  Stores train/test splits data
+**Output Location:** `/proj/results/R/generate_prediction_data/cv_acr*`
 
-**eigen_data** - Has eigen decompositions used for predicitons
+#### Output Files
 
-**master_files** -  R scripts required for running predictions (must be executed to generate output)
+- **`cv_acr_5f.json`** - Train/test splits data
+- **`eigen_data/`** - Eigen decompositions used for predictions
+- **`master_files/`** - R scripts required for running predictions (must be executed to generate output)
+- **`run_data/`** - Directories for storing prediction results
 
-**run_data** - Directories for storing prediction results
+**Related Projects:**
+- **`process_R_pred_data`** - Processes prediction output and generates visualization figures
+- **`get_vars`** - Calculates variances and generates corresponding figures
 
-**process_R_pred_data** - Processes prediction output and generates figures.
+### Example 2: Genomic Prediction Within Environments
 
-**get_vars** - Calculates variances and generates corresponding figures.
+**Project:** `generate_prediction_data`
 
-**process_R_pred_data**
+Generates files for genomic predictions with genotypic values within specific environments.
 
-Processes prediction output and generates visualization figures.
+**Output Location:** `/proj/results/R/generate_prediction_data/cv_wtn_tra`
 
-## Example code 2: Genomic prediction for genotypic values within environments
+#### Output Files
 
-## generate_prediction_data
+- **`cv_wtn_tra.json`** - Train/test splits data
+- **`cv_wtn_tra_meta.txt`** - Metadata file containing:
+  - `connect` - CV identifier (combination of "cv" + "run")
+  - `train` - Data points in training set
+  - `test` - Data points in test set
+  - `train_env` - Environments in training set
+  - `train_geno` - Genotypes in training set
+  - `test_env` - Environments in test set
+  - `test_geno` - Genotypes in test set
+- **`cv_wtn_tra_sizes.png`** - Visualization of training and test set data points
+- **`master_files/`** - R scripts required for running predictions
+- **`run_data/`** - Directories for storing prediction results
 
-Generates files for genomic predictions with output stored in `/proj/results/R/generate_prediction_data/cv_wtn_tra`
+#### Important Notes
 
-### Output Files
+Console messages like *"run_50_cv1 has 6 environments with low number of genotypes"* indicate that after the 80:20 quadrant 1 split, some test environments contain fewer than 50 genotypes. Check logs for detailed counts per environment. In testing, these typically contained more than 40 genotypes, which is acceptable.
 
-**cv_wtn_tra.json** - Stores train/test splits data
+**Related Project:**
+- **`process_R_pred_data`** - Processes prediction output and generates visualization figures
 
-**cv_wtn_tra_meta.txt** - Contains metadata for cv_wtn_tra.json with the following fields:
-- `connect` - CV identifier (combination of "cv" + "run")  
-- `train` - Data points in training set
-- `test` - Data points in test set
-- `train_env` - Environments in training set
-- `train_geno` - Genotypes in training set
-- `test_env` - Environments in test set
-- `test_geno` - Genotypes in test set
+### Example 3: Environment Clustering Analysis
 
-**cv_wtn_tra_sizes.png** - Visualization of training and test set data points from cv_wtn_tra_meta
+**Project:** `feature_importance`
 
-**master_files** - R scripts required for running predictions (must be executed to generate output)
+Uses predicted values of the core set to derive clusters of environments based on predicted GxE (Genotype × Environment) patterns.
 
-**run_data** - Directories for storing prediction results
-
-Note: Console messages like "run_50_cv1 has 6 environments with low number of genotypes" indicate that after the 80:20 quadrant 1 split, some test environments contain fewer than 50 genotypes. Check logs for detailed counts per environment. In testing, these typically contained more than 40 genotypes, which is acceptable.
-
-## process_R_pred_data
-
-Processes prediction output and generates visualization figures.
-
-## Example code 3: Clustering environments based on predicted GxE patterns
-
-**feature_importance** - Uses the predicted values of the core set to derive 
-clusters of environments. Results are stored at `/proj/results`
+**Output Location:** `/proj/results`
 
 ## License
 
-This project is licensed under the MIT License.  
-See the [LICENSE](LICENSE) file for full details.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for full details.
