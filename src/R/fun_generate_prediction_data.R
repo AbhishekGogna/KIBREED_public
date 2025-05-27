@@ -60,250 +60,90 @@ get_random_string <- function(length) {
 
 write_run_data <- function(run_meta,
                            write_path, # relative path of base_directory
-                           input_data_at, # relative path of input_path
-                           run_script_at, # relative path of run_script,
-                           cv_schema_at,
-                           user_dir = "/qg-10/data/AGR-QG/Gogna/KIBREED_v2", # absolute path switch
-                           container_at = "/qg-10/data/AGR-QG/Gogna/containers/cc_jup_rst.sif",
-                           reservation){ # absolute path of container
+                           run_script_at, # relative path of run_script
+                           user_dir = "/proj"){ # absolute path switch
+  
+  # Chunk for bash master files
+  bash_cmd <- 'nohup Rscript %s "%s" "%s" "%s" "%s" "%s" > %s/cc_%s.log 2> %s/cc_%s.err &' # for the file to run from inside the container
+  
+  #define base directories
+  master_scr_at <-  sprintf("%s/master_files", write_path)
+  run_data_at <- sprintf("%s/run_data", write_path)
+  
+  create_dir_file(c(master_scr_at, run_data_at), file = FALSE)
+  
+  # Produce scripts
+  scripts_data <- list()
+  master_script_data <- list()
+  
+  for(i in 1:nrow(run_meta)){
+    # Fetch variables
+    cv_type <- gsub(".*/(\\w+)", "\\1", write_path, perl = TRUE)
+    cv_id <- run_meta$run_id[i]
+    model_name <- run_meta$model_alias[i]
+    model_spec <- run_meta$model_specs[i]
     
-    # Chunks which will be written
-    chunk_1 <- '# define variables
-user_home_path="%s" # path to the home directory of user
-container_at="%s" # name of container in the user_home_path
-proj_path="%s" # path
-tmp_dir="%s" # path
-run_dir="%s" # place holder for if in future you want to start rstudio from within an run instance. Mind -> BLOWN!!
-r_lib_path="%s" # path
-ext_dir_out="%s" # path
-run_script="%s" # path
-cv_type="%s"
-cv_id="%s"
-model_name="%s"
-model_spec="%s"
-instance_name="%s"
-slurm_id_at="%s"
-ext_lib_blas="/qg-10/data/AGR-QG/Gogna/computing_containers/openblas_3.23/inst/qg-10.ipk-gatersleben.de/lib/libopenblas.so"
-
-# write slurm id for tracking
-echo -e "${instance_name}\t${SLURM_JOB_ID}\t$(hostname)" >> "${slurm_id_at}"
-
-# run instance
-singularity instance start \\
-  --contain \\
-  -W "${tmp_dir}" \\
-  -H "${proj_path}:/proj" \\
-  -B "${ext_lib_blas}:/usr/local/lib/R/lib/libRblas.so" \\
-  -B "${r_lib_path}:/proj/renv" \\
-  -B "${ext_dir_out}:/proj/ext_dir" \\
-  -B "${run_script}:/proj/tmp_data/run_script_%s.R" \\
-  "${container_at}" \\
-  "${instance_name}"
-
-# predictions
-singularity exec \\
-  --pwd "/proj/" \\
-  "instance://${instance_name}" \\
-  Rscript "/proj/tmp_data/run_script_%s.R" \\
-  "${cv_type}" \\
-  "${cv_id}" \\
-  "${model_name}" \\
-  "${model_spec}" \\
-  "%s"
-
-# clean up for tmp and dump files
-rm -rf "${tmp_dir}/${model_name}_dump"
-#rm -rf "${tmp_dir}/${model_name}_tmp"
-
-# stop instance
-singularity instance stop "$instance_name"
-exit' # for the workfiles
+    # Define the bash master file
+    bash_file <- sprintf("%s/cc_bash_model_%s.sh", master_scr_at, model_name)
+    master_script_data[[paste0("bash_", model_name)]] <- create_dir_file(bash_file) ## store its data to later make it executable
     
-    #address="127.0.0.1"
-    #port=$(comm -23 <(seq 7000 8888 | sort) <(ss -Htan | awk "{print $4}" | cut -d":" -f2 | sort -u) | shuf | head -n 1) # assign port dyanamically
-    #chunk_2 <- 'srun --auks=yes --mem=%sG --mail-type=FAIL --mail-user=gogna@ipk-gatersleben.de -c %s --time=%s %s > %s/worker_%s_%s.log 2> %s/worker_%s_%s.err &' # for the master file coordinating the run of chunk_1 derived files
-    #if(!is.null(reservation)){
-    #  chunk_2 <- paste0("srun --auks=yes --mem=%sG --mail-type=FAIL --mail-user=gogna@ipk-gatersleben.de --reservation=", reservation, " -c %s --time=%s %s > %s/worker_%s_%s.log 2> %s/worker_%s_%s.err &")
-    #}
-    
-    chunk_2 <- paste0(
-      'sbatch --auks=yes',' ',
-      '--job-name=%s_%s_%s', ' ',                     # 0 cv_type, model_name, cv_id
-      '--mem=%sG',' ',                                # 1 memory
-      '-c %s', ' ',                                   # 2 number of cores
-      '--time=%s', ' ',                               # 3 time needed
-      '--mail-type=FAIL', ' ',                        # when to receive email
-      '--mail-user=gogna@ipk-gatersleben.de', ' ',    # where to receive email
-      '-o %s/worker_%s_%s.log', ' ',                  # 4 log file
-      '-e %s/worker_%s_%s.err', ' ',                  # 5 error file
-      '--wrap="%s" &'                                 # 6 script to run
-    )
-    if(!is.null(reservation)){
-      chunk_2 <- paste0(
-        'sbatch --auks=yes',' ', 
-        '--job-name=%s_%s_%s', ' ',                   # 0 cv_type, model_name, cv_id
-        '--mem=%sG',' ',                              # 1 memory
-        '-c %s', ' ',                                 # 2 number of cores
-        '--time=%s', ' ',                             # 3 time needed
-        '--account=', reservation, ' ',               # reservation
-        '--reservation=', reservation, ' ',           # reservation
-        '--mail-type=FAIL', ' ',                      # when to receive email
-        '--mail-user=gogna@ipk-gatersleben.de', ' ',  # where to receive email
-        '-o %s/worker_%s_%s.log', ' ',                # 6 log file
-        '-e %s/worker_%s_%s.err', ' ',                # 7 error file
-        '--wrap="%s" &'                               # 8 script to run
-      )
-    }
-
-    chunk_3 <- 'nohup Rscript %s "%s" "%s" "%s" "%s" "%s" > %s/cc_%s.log 2> %s/cc_%s.err &' # for the file to run from inside the container
-    
-    #define base directories
-    r_lib_path <- sprintf("%s/renv", user_dir) # where to source the r_lib from
-    master_scr_at <-  sprintf("%s/master_files", write_path)
-    run_data_at <- sprintf("%s/run_data", write_path)
-    current_time <- Sys.time()
-    time_stamp <- paste0(get_random_string(10), "_", format(current_time, "D_%d_%m_T_%H_%M"))
-    
-    create_dir_file(c(master_scr_at, run_data_at), file = FALSE)
-    
-    # Produce scripts
-    scripts_data <- list()
-    master_script_data <- list()
-    
-    for(i in 1:nrow(run_meta)){
-      # Fetch variables
-      cv_type <- gsub(".*/(\\w+)", "\\1", write_path, perl = TRUE)
-      cv_id <- run_meta$run_id[i]
-      model_name <- run_meta$model_alias[i]
-      model_spec <- run_meta$model_specs[i]
-      mem <- as.character(run_meta$mem[i])
-      cpu <- as.character(run_meta$cpu[i])
-      time <- as.character(run_meta$time[i])
-      
-      # Define the slurm master file
-      srun_file <- sprintf("%s/srun_model_%s.sh", master_scr_at, model_name)
-      master_script_data[[paste0("srun_", model_name)]] <-  create_dir_file(srun_file) ## store its data to later make it executable
-      
-      # Define the bash master file
-      
-      bash_file <- sprintf("%s/cc_bash_model_%s.sh", master_scr_at, model_name)
-      master_script_data[[paste0("bash_", model_name)]] <- create_dir_file(bash_file) ## store its data to later make it executable
-      
-      # Define run_folder structure for the present row of run_meta
-      save_info <- list()
-      cv_run_folder <- paste0(sprintf("%s/%s", run_data_at, cv_id))
-      create_dir_file(cv_run_folder, file = FALSE)
-      for (sub_dirs in c("ext_dir", "preds", "logs", "run_scripts", "tmp_data", "slurm_data", "renv")){
-        sub_dir_path <- paste0(cv_run_folder, "/", sub_dirs)
-        save_info[[sub_dirs]] <- sub_dir_path   
-        create_dir_file(sub_dir_path, file = FALSE)
-      }
-      file_name <- sprintf("%s/run_scr_%s_%s.sh", save_info[["run_scripts"]], model_name, cv_id)
-      file_name_abs <- gsub("/proj", user_dir, file_name)
-      
-      ## Store the info for later use
-      scripts_data[[paste0(cv_id, "_", model_name)]] <- save_info
-      
-      # Write lines to slurm master file
-      slurm_id_at <- sprintf("%s/%s_%s_srun_id.log", 
-                             gsub("/proj", user_dir, run_data_at), 
-                             model_name, 
-                             time_stamp)
-      ## Add header
-      if(identical(readLines(srun_file), character(0))) {
-        cat("#!/usr/bin/env bash", 
-            file = srun_file, 
-            sep = "\n")
-        cat(sprintf("if [ -f {%s} ] ; then rm {%s} ; fi \n", slurm_id_at, slurm_id_at), 
-            file = srun_file, 
-            append = T)
-      }
-      ## Add one line for each row of meta file
-      master_scr_to_write <- sprintf(chunk_2, cv_type, model_name, cv_id, mem, cpu, time,
-                                     gsub("/proj", user_dir, save_info[["slurm_data"]]), model_name, cv_id, 
-                                     gsub("/proj", user_dir, save_info[["slurm_data"]]), model_name, cv_id,
-                                     file_name_abs)
-      srun_script <- readLines(srun_file)
-      if(master_scr_to_write %!in% srun_script){
-        cat(master_scr_to_write,
-            file = srun_file,
-            sep = "\n",
-            append = T)
-      }
-      
-      # Write lines to the bash master file
-      ## Add header
-      if(identical(readLines(bash_file), character(0))) {
-        cat("#!/usr/bin/env bash", 
-            file = bash_file, 
-            sep = "\n")
-      }
-      
-      ## Add one line for each row of meta file
-      logs_at <- paste0(cv_run_folder, "/logs")
-      bash_scr_to_write <- sprintf(chunk_3, run_script_at, cv_type, cv_id, model_name, model_spec, "TRUE", logs_at, model_name, logs_at, model_name)
-      bash_script <- readLines(bash_file)
-      if(bash_scr_to_write %!in% bash_script){
-        cat(bash_scr_to_write,
-            file = bash_file,
-            sep = "\n",
-            append = T)
-      }
-
-      # Write lines to slurm work file
-      if(!file.exists(file_name)){
-        cat("#!/usr/bin/env bash", 
-            file = file_name, 
-            sep = "\n")
-        instance_name = sprintf("ins_%s_%s", cv_id, model_name)
-        cat(sprintf(chunk_1, 
-                    user_dir,
-                    gsub("/proj", user_dir, container_at),
-                    gsub("/proj", user_dir, cv_run_folder),
-                    gsub("/proj", user_dir, save_info[["tmp_data"]]),
-                    gsub("/proj", user_dir, save_info[["tmp_data"]]),
-                    gsub("/proj", user_dir, r_lib_path),
-                    gsub("/proj", user_dir, input_data_at),
-                    gsub("/proj", user_dir, run_script_at),
-                    cv_type,
-                    cv_id,
-                    model_name,
-                    model_spec,
-                    instance_name,
-                    slurm_id_at,
-                    model_name,
-                    model_name,
-                    "FALSE"), 
-            file = file_name, 
-            sep = "\n",
-            append = T)
-      }
+    # Define run_folder structure for the present row of run_meta
+    save_info <- list()
+    cv_run_folder <- paste0(sprintf("%s/%s", run_data_at, cv_id))
+    create_dir_file(cv_run_folder, file = FALSE)
+    for (sub_dirs in c("ext_dir", "preds", "logs")){
+      sub_dir_path <- paste0(cv_run_folder, "/", sub_dirs)
+      save_info[[sub_dirs]] <- sub_dir_path   
+      create_dir_file(sub_dir_path, file = FALSE)
     }
     
-    # Make hidden files if they do not exist
-    rprofile_file <- paste0(user_dir, "/.Rprofile")
-    if(!file.exists("/proj/.Rprofile")) {
-      file.create(rprofile_file, recursive = TRUE)
-      cat('if(getwd() == "/proj") source("renv/activate.R")\n', file = rprofile_file)
+    ## Store the info for later use
+    scripts_data[[paste0(cv_id, "_", model_name)]] <- save_info
+    
+    # Write lines to the bash master file
+    ## Add header
+    if(identical(readLines(bash_file), character(0))) {
+      cat("#!/usr/bin/env bash", 
+          file = bash_file, 
+          sep = "\n")
     }
     
-    for (master_script_path in names(master_script_data)) {
-      file_path <- master_script_data[[master_script_path]]
-      file_check <- readLines(file_path)
-      to_write <- 'wait'
-      if(to_write %!in% file_check){
-        cat('wait\necho "All jobs done!"', file = file_path, append = T, sep = "\n")
-      }
+    ## Add one line for each row of meta file
+    logs_at <- paste0(cv_run_folder, "/logs")
+    bash_scr_to_write <- sprintf(bash_cmd, run_script_at, cv_type, cv_id, model_name, model_spec, "TRUE", logs_at, model_name, logs_at, model_name)
+    bash_script <- readLines(bash_file)
+    if(bash_scr_to_write %!in% bash_script){
+      cat(bash_scr_to_write,
+          file = bash_file,
+          sep = "\n",
+          append = T)
     }
-    
-    run_script_folders <- unique(do.call(rbind, lapply(scripts_data, function(x) x[["run_scripts"]])))
-    for(script_folder in c(master_scr_at, run_script_folders)) system(sprintf("chmod +x %s/*.sh", script_folder))
-
-    # prepare output
-    output <- list()
-    output[["run_data"]] <- scripts_data
-    output[["master_scripts"]] <- master_script_data
-    return(output)
+  }
+  
+  # Make hidden files if they do not exist
+  rprofile_file <- paste0(user_dir, "/.Rprofile")
+  if(!file.exists("/proj/.Rprofile")) {
+    file.create(rprofile_file, recursive = TRUE)
+    cat('if(getwd() == "/proj") source("renv/activate.R")\n', file = rprofile_file)
+  }
+  
+  for (master_script_path in names(master_script_data)) {
+    file_path <- master_script_data[[master_script_path]]
+    file_check <- readLines(file_path)
+    to_write <- 'wait'
+    if(to_write %!in% file_check){
+      cat('wait\necho "All jobs done!"', file = file_path, append = T, sep = "\n")
+    }
+  }
+  
+  # Make master script executable
+  system(sprintf("chmod +x %s/*.sh", master_scr_at))
+  
+  # prepare output
+  output <- list()
+  output[["run_data"]] <- scripts_data
+  output[["master_scripts"]] <- master_script_data
+  return(output)
 }
 
 generate_run_scripts <- function(data, 
@@ -311,8 +151,7 @@ generate_run_scripts <- function(data,
                                  input_data_at, 
                                  empty_past,
                                  model_info,
-                                 wtn = FALSE, 
-                                 reservation = NULL){
+                                 wtn = FALSE){
   # Sequester data
   log_file <- data[["log_file"]]
   write_at <- data[["write_at"]]
@@ -377,11 +216,7 @@ generate_run_scripts <- function(data,
   # Create run data
   run_data <- write_run_data(run_meta = run_meta,
                              write_path = write_at, # relative path of base_directory
-                             input_data_at = input_data_at, # relative path of input_path
-                             run_script_at = run_script_at, # relative path of run_script,
-                             cv_schema_at = sprintf("%s.json", write_at),
-                             reservation = reservation)
-
+                             run_script_at = run_script_at) # relative path of run_script
   # Generate output
   out <- list()
   out[["log_file"]] <- log_file
@@ -797,7 +632,7 @@ cv_wtn_tra <- function(data, runs, test_prop){
   if(!dir.exists(output[["write_at"]])){dir.create(output[["write_at"]], recursive = T)}
   
   # Write log
-  cat("Creating acr cross validation data ------------------",
+  cat("Creating wtn cross validation data ------------------",
       file = log_file,
       sep = "\n")
   
@@ -860,7 +695,7 @@ cv_wtn_tra <- function(data, runs, test_prop){
           pull(Env)
         valid_test_data <- split_by_env %>% filter(Env %in% split_by_env_sub)
         test_set_cv1 <- valid_test_data[sample(1:nrow(valid_test_data),   test_train_split*length(quad_1_index)), ] %>% pull(idx_cv) %>% as.vector()
-        # here i count genotypes per environment, remove those environments with counts less  than 50th quantile and finally sample from the data corresponding to the selcted environments.
+        # here i count genotypes per environment, remove those environments with counts less  than 50th quantile and finally sample 20% from the data corresponding to the selected environments.
         outdata[["train"]] <- quad_1_index[quad_1_index %!in% test_set_cv1]
 
         test_cv1_env_subset <- NA
@@ -870,8 +705,18 @@ cv_wtn_tra <- function(data, runs, test_prop){
           outdata[["test"]] <- test_set_cv1
           test_cv1_env_subset <- length(split_by_env_sub)
           #sum(unique(c(outdata$train, outdata$test)) %in% quad_1_index) # sanity check
-          env_with_low_geno <- pheno_data[outdata[["test"]], ] %>% count(Env) %>% filter(n <  50)
-          if(nrow(env_with_low_geno) != 0){print(paste0(instance_name, " has ", nrow  (env_with_low_geno), " environments with low number of genotypes"))}
+          env_counts <- pheno_data %>% filter(idx_cv %in% test_set_cv1) %>% count(Env)
+          env_with_low_geno <- env_counts %>% filter(n <  50)
+          if(nrow(env_with_low_geno) >= 1){
+            cat(sprintf("Test set genotype counts in cv1 %s", instance_name),
+                file = log_file,
+                sep = "\n",
+                append = T)
+            write.table(env_counts,
+                        file = log_file,
+                        append = T)
+          }
+          if(nrow(env_with_low_geno) != 0){print(paste0(instance_name, " has ", nrow  (env_with_low_geno), " environments in test set with low number of genotypes"))}
         }
         if(j == "cv2"){
           ##cv2
@@ -886,6 +731,8 @@ cv_wtn_tra <- function(data, runs, test_prop){
           outdata[["test"]] <- sort(c(quad_4_index))
         }
         outdata[["run_name"]] <- instance_name
+        
+        
 
         ## generate output
         meta_info <- data.frame("connect" = instance_name,
@@ -893,11 +740,10 @@ cv_wtn_tra <- function(data, runs, test_prop){
                                 "run" = i, 
                                 "train" = length(outdata[["train"]]),
                                 "test" = length(outdata[["test"]]),
-                                "test_cv1_env_subset" = test_cv1_env_subset,
-                                "train_env" = pheno_data[outdata[["train"]], ] %>% pull(Env)  %>% unique() %>% length(),
-                                "train_geno" = pheno_data[outdata[["train"]], ] %>% pull  (Geno_new) %>% unique() %>% length(),
-                                "test_env" = pheno_data[outdata[["test"]], ] %>% pull(Env)  %>% unique() %>% length(),
-                                "test_geno" = pheno_data[outdata[["test"]], ] %>% pull  (Geno_new) %>% unique() %>% length())
+                                "train_env" = pheno_data %>% filter(idx_cv %in% outdata[["train"]]) %>% pull(Env)  %>% unique() %>% length(),
+                                "train_geno" = pheno_data %>% filter(idx_cv %in% outdata[["train"]]) %>% pull(Geno_new) %>% unique() %>% length(),
+                                "test_env" = pheno_data %>% filter(idx_cv %in% outdata[["test"]]) %>% pull(Env)  %>% unique() %>% length(),
+                                "test_geno" = pheno_data %>% filter(idx_cv %in% outdata[["train"]]) %>% pull(Geno_new) %>% unique() %>% length())
         out[[instance_name]] <- outdata
         out_2 <- rbind(out_2, meta_info)
       }

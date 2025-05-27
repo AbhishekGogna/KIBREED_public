@@ -90,7 +90,6 @@ list(
                                    run_script_at = sprintf("%s/src/R/scr_genomic_prediction_wtn.R", project_path),
                                    input_data_at = sprintf("%s/results/R", project_path),
                                    model_info = wtn_models[1:6, ],
-                                   wtn = TRUE,
-                                   reservation = NULL)
+                                   wtn = TRUE)
   )
 )

@@ -54,9 +54,8 @@ sapply(file.path(project_path, dirs), function(x) {
 
 # Run sub projects
 proj_list <- names(yaml::read_yaml("_targets.yaml"))
-proj_list
 # [1] "generate_prediction_data" "process_R_pred_data"
-# [3] "get_vars"
+# [3] "get_vars"  [4] "feature_importance"
 
 # Set the subproject you want to run
 Sys.setenv("TAR_PROJECT" = proj_list[1])
@@ -89,10 +88,34 @@ tar_make(names = "target_name") # from names in tar_manifest
 
 ## Example code 2: Genomic prediction for genotypic values within environments
 
-**generate_prediction_data** - Generates files for genomic predictions. Output stored in `/proj/results`
-    you need to run the files to generate the output, which is stored in `/proj/results`
+## generate_prediction_data
 
-**process_R_pred_data** - Processes prediction output and generates figures.
+Generates files for genomic predictions with output stored in `/proj/results/R/generate_prediction_data/cv_wtn_tra`
+
+### Output Files
+
+**cv_wtn_tra.json** - Stores train/test splits data
+
+**cv_wtn_tra_meta.txt** - Contains metadata for cv_wtn_tra.json with the following fields:
+- `connect` - CV identifier (combination of "cv" + "run")  
+- `train` - Data points in training set
+- `test` - Data points in test set
+- `train_env` - Environments in training set
+- `train_geno` - Genotypes in training set
+- `test_env` - Environments in test set
+- `test_geno` - Genotypes in test set
+
+**cv_wtn_tra_sizes.png** - Visualization of training and test set data points from cv_wtn_tra_meta
+
+**master_files** - R scripts required for running predictions (must be executed to generate output)
+
+**run_data** - Directories for storing prediction results
+
+Note: Console messages like "run_50_cv1 has 6 environments with low number of genotypes" indicate that after the 80:20 quadrant 1 split, some test environments contain fewer than 50 genotypes. Check logs for detailed counts per environment. In testing, these typically contained more than 40 genotypes, which is acceptable.
+
+## process_R_pred_data
+
+Processes prediction output and generates visualization figures.
 
 ## Example code 3: Clustering environments based on predicted GxE patterns
 
