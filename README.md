@@ -63,9 +63,6 @@ Sys.setenv("TAR_PROJECT" = proj_list[1])
 # Load the targets package
 library(targets)
 
-# Confirm the project name
-Sys.getenv("TAR_PROJECT")
-
 # View planned targets
 tar_manifest() # each name is a target to be run
 
