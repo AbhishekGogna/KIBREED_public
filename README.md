@@ -89,10 +89,15 @@ tar_make(names = "target_name") # from names in tar_manifest
 
 ## Example code 2: Genomic prediction for genotypic values within environments
 
-**generate_prediction_data** - Generates files for genomic predictions. Output stored in `/proj/results`.
-    you need to run the files to generate the output, which is stored in /proj/results
+**generate_prediction_data** - Generates files for genomic predictions. Output stored in `/proj/results`
+    you need to run the files to generate the output, which is stored in `/proj/results`
 
 **process_R_pred_data** - Processes prediction output and generates figures.
+
+## Example code 3: Clustering environments based on predicted GxE patterns
+
+**feature_importance** - Uses the predicted values of the core set to derive 
+clusters of environments. Results are stored at `/proj/results`
 
 ## License
 
