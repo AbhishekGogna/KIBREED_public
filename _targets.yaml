@@ -7,6 +7,3 @@ process_R_pred_data:
 get_vars:
   script: /proj/run/R/get_vars.R
   store: /proj/store/get_vars
-feature_importance:
-  script: /proj/run/R/feature_importance.R
-  store: /proj/store/feature_importance

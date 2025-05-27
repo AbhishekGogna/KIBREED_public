@@ -3,19 +3,6 @@ execute <- TRUE
 # Core functions
 "%!in%" <- Negate("%in%")
 
-get_data <- function(pheno_data_path, existing_data = NULL, key){
-
-  if(!is.null(existing_data)){
-    existing_data[[key]] <- qread(pheno_data_path)
-    out <- existing_data
-  } else {
-    out <- list()
-    out[[key]] <- qread(pheno_data_path)
-  }
-
-  return(out)
-}
-
 nested_list_to_dataframe <- function(nested_list) {
   
   # Flatten the nested list
@@ -520,7 +507,7 @@ perfom_eigen_decompositions <- function(g_data,
 }
 
 # Acr
-create_pred_acr_objects <- function(existing_data,
+create_pred_acr_objects <- function(existing_data_path,
                                     write_at,
                                     log_at,
                                     tmp_at,
@@ -529,7 +516,7 @@ create_pred_acr_objects <- function(existing_data,
   # Put a log file
   run_instance <- as.character(format(Sys.time(),  format = "%d_%m_%Y_%H_%M"))
   log_at <- sprintf("%s/%s", log_at, run_instance)
-  log_file <- sprintf("%s/pred_wtn.log", log_at)
+  log_file <- sprintf("%s/pred_acr.log", log_at)
   create_dir_file(log_at, file = FALSE)
   
   # Put a temp_dir
@@ -545,6 +532,7 @@ create_pred_acr_objects <- function(existing_data,
   create_dir_file(write_at, file = FALSE)
   
   # Sequester data
+  existing_data <- qread(existing_data_path)
   pheno_data_acr <- existing_data[["pheno_data_acr"]]
   g_a_data <- existing_data[["geno_data_a"]]
   g_d_data <- existing_data[["geno_data_d"]]
@@ -648,91 +636,6 @@ cv_acr_5f <- function(data, runs, folds){
   return(out)
 }
 
-cv_acr_str <- function(data, runs, take_parts){
-  # Sequester data
-  log_file <- data[["log_file"]]
-  write_at <- data[["write_at"]]
-  pheno_data <- data[["pheno_data_acr"]]
-  g_a_data <- data[["g_a_data"]]
-  g_d_data <- data[["g_d_data"]]
-  
-  # Produce output
-  out <- list()
-  out[["log_file"]] <- log_file
-  out[["write_at"]] <- sprintf("%s/cv_acr_str", write_at)
-
-  # Generate write at folder
-  if(!dir.exists(out[["write_at"]])){dir.create(out[["write_at"]], recursive = T)}
-  
-  # Write a section in the log file
-  cat("Creating str cross validation data ------------------",
-      file = log_file,
-      sep = "\n",
-      append = TRUE)
-  
-  # Produce data
-  if (execute) {
-    save_data <- list()
-
-    pheno_data_mod <- pheno_data %>% mutate(Series_mod = gsub("(Exp_\\d).*", "\\1", Series,   perl = TRUE)) 
-    test_sizes <- pheno_data_mod %>% count(Series_mod) %>% 
-      mutate(n_prop = as.integer(0.2*n)) %>% select(Series_mod, n_prop)
-
-    write.table(test_sizes, log_file, append = TRUE, row.names =   FALSE)
-
-    for (run in 1:runs){
-      test_set <- c()
-      for (ser in test_sizes$Series_mod){
-        to_sample <-test_sizes %>% filter(Series_mod == ser) %>%
-          pull(n_prop)
-        p_subset <- pheno_data_mod %>% filter(Series_mod == ser) %>%
-          pull(idx_with_series)
-        subset_sampled <- sample(p_subset, to_sample, replace = FALSE)
-        test_set <- c(test_set, subset_sampled)
-      }
-      test_set_geno <- pheno_data_mod %>% filter(idx_with_series %in% test_set) %>% pull  (Geno_new)
-      train_set <- pheno_data_mod %>% filter(idx_with_series %!in% test_set) %>% 
-        filter(Geno_new %!in% test_set_geno) %>% pull(idx_with_series)
-
-      if(take_parts){
-        val_set <- c(sample(train_set, as.integer(0.16 * length(train_set))), 
-                     sample(test_set, as.integer(0.04 * length(test_set))))
-      } else {
-        val_set <- sample(train_set, as.integer(0.2 * length(train_set)))
-      }
-      train_set_final <- train_set[which(train_set %!in% val_set)]
-      test_set_final <- test_set[which(test_set %!in% val_set)]
-
-      save_data[[paste0("r_", run, "_f_", run)]] <- list(
-        "train" = as.integer(train_set_final),
-        "val" = as.integer(val_set),
-        "test" = as.integer(test_set_final),
-        "run_name" = paste0("cv_acr_str_", "r_", run, "_f_", run)
-      )
-    }
-    
-    # Generate eigen decomposition
-    geno_order <- pheno_data %>% distinct(idx_with_series, connect_geno_data) %>%
-      #filter(row_number() < 101) %>%
-      pull(connect_geno_data) %>% as.vector()
-    
-    eigen_paths <- perfom_eigen_decompositions(g_data = g_a_data[geno_order, ],
-                                               g_data_dom = g_d_data[geno_order, ],
-                                               log_at = log_file,
-                                               write_at = sprintf("%s/eigen_data", out[["write_at"]]))
-    
-    # Add generated data to output object
-    out[["run_info"]] <- save_data
-    out[["run_type"]] <- "cv_acr_str"
-
-    # Write json file
-    exportJson <- toJSON(out[["run_info"]])
-    write(exportJson, sprintf("%s/cv_acr_str.json", out[["write_at"]]))
-    
-  }
-  return(out)
-}
-
 cv_acr_sce <- function(data, take_parts){
   # Sequester data
   log_file <- data[["log_file"]]
@@ -745,10 +648,10 @@ cv_acr_sce <- function(data, take_parts){
   out <- list()
   out[["log_file"]] <- log_file
   out[["write_at"]] <- sprintf("%s/cv_acr_sce", write_at)
-
+  
   # Generate write at folder
   if(!dir.exists(out[["write_at"]])){dir.create(out[["write_at"]], recursive = T)}
-
+  
   # Put a log statement
   cat("Creating sce cross validation data ------------------",
       file = log_file,
@@ -758,14 +661,14 @@ cv_acr_sce <- function(data, take_parts){
   # Produce data
   if (execute) {
     save_data <- list()
-
+    
     pheno_data_mod <- pheno_data %>% mutate(Series_mod = gsub("(Exp_\\d).*", "\\1", Series,   perl = TRUE)) 
     series <- sort(unique(pheno_data_mod$Series_mod))
-
+    
     series_numbers <- 1:length(series)
-
+    
     scenarios <- NULL
-
+    
     for (i in series_numbers){
       vals <- cbind("test" = i, "train" = series_numbers)
       vals <- vals[vals[,"test"] != vals[, "train"], ]
@@ -776,45 +679,45 @@ cv_acr_sce <- function(data, take_parts){
       }
       scenarios <- rbind(scenarios, cbind(1, extension))
     } # one exp series as train all others as train in a given instance
-
+    
     colnames(scenarios) <- c("scenario", series)
-
+    
     for (sce in series_numbers[1:(length(series_numbers)-1)]){
       scenario_train <- t(combn(series_numbers, sce))
-
+      
       extension <- matrix(NA, nrow(scenario_train), length(series_numbers))
-
+      
       for (i in 1:nrow(extension)){
         extension[i, scenario_train[i, ]] <- 1
         extension[i, -scenario_train[i, ]] <- 2
       }
-
+      
       scenarios <- rbind(scenarios, cbind((sce+1), extension))
     } # 2 to total number of series experimental series as train and others as test in a  given instance. 
-
+    
     scenarios <- as_tibble(scenarios) %>% mutate(row = row_number())
-
+    
     for (run in 1:nrow(scenarios)){
       scenario_data <- scenarios %>% filter(row == run) %>%
         pivot_longer(!c(scenario, row), names_to = "series", values_to = "values")
       train_series <- scenario_data %>% filter(values == 1) %>% pull(series) %>% as.character ()
       test_series <- scenario_data %>% filter(values == 2) %>% pull(series) %>% as.character()
-
+      
       test_set_data <- pheno_data_mod %>% filter(Series_mod %in% test_series)
       test_set <- test_set_data %>% pull(idx_with_series)
       train_set <- pheno_data_mod %>% filter(Series_mod %in% train_series) %>% 
         filter(Geno_new %!in% test_set_data$Geno_new) %>% pull(idx_with_series)
-
+      
       if(take_parts){
         val_set <- c(sample(train_set, as.integer(0.16 * length(train_set))), 
                      sample(test_set, as.integer(0.04 * length(test_set))))
       } else {
         val_set <- sample(train_set, as.integer(0.2 * length(train_set)))
       }
-
+      
       train_set_final <- train_set[which(train_set %!in% val_set)]
       test_set_final <- test_set[which(test_set %!in% val_set)]
-
+      
       save_data[[paste0("r_", run, "_f_", run)]] <- list(
         "train" = as.integer(train_set_final),
         "val" = as.integer(val_set),
@@ -836,7 +739,7 @@ cv_acr_sce <- function(data, take_parts){
     # Add generated data to output object
     out[["run_info"]] <- save_data
     out[["run_type"]] <- "cv_acr_sce"
-
+    
     # Write json file
     exportJson <- toJSON(out[["run_info"]])
     write(exportJson, sprintf("%s/cv_acr_sce.json", out[["write_at"]]))
@@ -846,7 +749,7 @@ cv_acr_sce <- function(data, take_parts){
 }
 
 # Wtn
-create_pred_wtn_objects <- function(existing_data,
+create_pred_wtn_objects <- function(existing_data_path,
                                     write_at,
                                     log_at,
                                     tmp_at,
@@ -866,12 +769,8 @@ create_pred_wtn_objects <- function(existing_data,
       sep = "\n")
 
   # Sequester data
+  existing_data <- qread(existing_data_path)
   pheno_data_wtn <- existing_data[["pheno_data_wtn"]]
-  #geno_data_a <- existing_data[["geno_data_a"]]
-  #geno_data_d  <- existing_data[["geno_data_d"]] 
-  #param_data <- existing_data[["param_data"]]
-  #ec_data <- existing_data[["ec_data"]]
-  #climate_data <- existing_data[["climate_data"]]
 
   # Generate output
   out <- list()
@@ -1009,398 +908,6 @@ cv_wtn_tra <- function(data, runs, test_prop){
     output[["run_type"]] <- "cv_wtn_tra"
     output[["run_meta"]] <- out_2
 
-    return(output)
-  } else {
-    print("No cross-validation data was generated")
-    return(NULL)
-  }
-}
-
-cv_wtn_LoO <- function(data){
-  
-  # Sequester data
-  log_file <- data[["log_file"]]
-  write_at <- data[["write_at"]]
-  pheno_data <- data[["pheno_data_wtn"]]
-  
-  # Produce output
-  output <- list()
-  output[["log_file"]] <- log_file
-  output[["write_at"]] <- sprintf("%s/cv_wtn_LoO", write_at)
-  
-  # Generate write at folder
-  if(!dir.exists(output[["write_at"]])){dir.create(output[["write_at"]], recursive = T)}
-  
-  # Write log
-  cat("Creating acr cross validation data ------------------",
-      file = log_file,
-      sep = "\n")
-  
-  # Produce data
-  if (execute){
-    set.seed(NULL)
-    
-    out <- list()
-    out_2 <- NULL
-    
-    # leave one env out
-    pheno_data_idx <- pheno_data
-    
-    env_site <- pheno_data_idx %>% distinct(Env, latlong, Year)
-    
-    qual_env_0 <- pheno_data %>% distinct(Env, Geno_new) %>%
-      mutate(present = 1) %>%
-      pivot_wider(id_cols = Geno_new, names_from = Env, values_from = present) %>%
-      rowwise() %>%
-      mutate(frequency = sum(c_across(starts_with("Exp")), na.rm = T)) %>%
-      ungroup() %>%
-      filter(frequency >= 4) %>%
-      select(where(~!all(is.na(.x))))
-    
-    qual_env_colSums <- colSums(qual_env_0[, 2:(ncol(qual_env_0) -1)], na.rm = T)
-    qual_env_colSums_n <- names(qual_env_colSums[which(qual_env_colSums >= 250)]) # 38
-    qual_env <- qual_env_0 %>% select(Geno_new, any_of(qual_env_colSums_n), frequency)
-    
-    for (i in 1:length(qual_env_colSums_n)){
-      outdata <- list()
-      ins_name <- paste0("LoO_run_", i)
-      test_env <- qual_env_colSums_n[i]
-      test_geno <- qual_env %>% select(Geno_new, test_env, frequency) %>% 
-        filter(!is.na(!!as.symbol(test_env)), frequency >=4 ) %>% pull(Geno_new)
-      
-      train_set_0 <- qual_env %>% select(-all_of(test_env)) %>%
-        rowwise() %>%
-        mutate(freq_mod = sum(c_across(starts_with("Exp")), na.rm = T)) %>%
-        ungroup() %>%
-        filter(Geno_new %in% test_geno, # only the test set genotypes are present in train set 
-               freq_mod >= 3) %>%
-        select(Geno_new, starts_with("Exp")) %>%
-        pivot_longer(cols = starts_with("Exp"), names_to = "Env", values_to = "present") %>%
-        filter(!is.na(present))%>%
-        mutate(type_cv = "train") %>%
-        left_join(env_site, by = "Env")
-      
-      ## correct for duplicate genotypes at given combination of latlong and year
-      duplicated_rows <- train_set_0 %>% count(Geno_new, latlong, Year) %>% filter(n > 1) %>%
-        left_join(train_set_0 %>% distinct(Env, latlong, Year, Geno_new), by = c("latlong", "Year", "Geno_new")) %>%
-        group_by(Geno_new, latlong, Year) %>% filter(row_number()==1) %>% ungroup() %>%
-        select(-n) # the idea is if there are more than one value for a genotype in a given environment, only one of them is kept it
-      
-      train_set <- train_set_0 %>% anti_join(duplicated_rows, by = colnames(duplicated_rows))
-      
-      train_geno <- train_set %>% distinct(Geno_new) %>% pull(Geno_new)
-      
-      test_set <- qual_env %>% select(Geno_new, test_env) %>% filter(!is.na(test_env)) %>%
-        filter(Geno_new %in% train_geno) %>% # only genotypes which are in train set are kept
-        pivot_longer(cols = starts_with("Exp"), names_to = "Env", values_to = "present") %>%
-        filter(!is.na(present)) %>%
-        mutate(type_cv = "test") %>%
-        left_join(env_site, by = "Env")
-      
-      combined_set <- train_set %>% bind_rows(test_set) %>% select(-present)
-      
-      pheno_data_idx_sub <- pheno_data_idx %>% inner_join(combined_set, by = c("Env", "Geno_new"))
-      
-      outdata[["test"]] <- pheno_data_idx_sub %>% filter(type_cv == "test") %>% pull(idx_cv) %>% as.vector()
-      outdata[["train"]] <- pheno_data_idx_sub %>% filter(type_cv == "train") %>% pull(idx_cv) %>% as.vector()
-      outdata[["run_name"]] <- ins_name
-      
-      meta_info <- data.frame("connect" = ins_name,
-                              "cv" = "LoO",
-                              "run" = i, 
-                              "train" = length(outdata[["train"]]),
-                              "test" = length(outdata[["test"]]),
-                              "test_cv1_env_subset" = NA,
-                              "train_env" = pheno_data_idx %>% filter(idx_cv %in% outdata[["train"]]) %>% pull(Env)  %>% unique() %>% length(),
-                              "train_geno" = pheno_data_idx %>% filter(idx_cv %in% outdata[["train"]]) %>% pull(Geno_new) %>% unique() %>% length(),
-                              "test_env" = pheno_data_idx %>% filter(idx_cv %in% outdata[["test"]]) %>% pull(Env)  %>% unique() %>% length(),
-                              "test_geno" = pheno_data_idx %>% filter(idx_cv %in% outdata[["test"]]) %>% pull(Geno_new) %>% unique() %>% length())
-      
-      out[[ins_name]] <- outdata
-      out_2 <- rbind(out_2, meta_info)
-    }
-    
-    # Produce output
-    output[["run_info"]] <- out
-    output[["run_type"]] <- "cv_wtn_LoO"
-    output[["run_meta"]] <- out_2
-
-    return(output)
-  } else {
-    print("No cross-validation data was generated")
-    return(NULL)
-  }
-} # to bahareh
-
-cv_wtn_cvL <- function(data, runs = 50, test_prop = 0.33){
-  
-  # Sequester data
-  log_file <- data[["log_file"]]
-  write_at <- data[["write_at"]]
-  pheno_data <- data[["pheno_data_wtn"]]
-  
-  # Produce output
-  output <- list()
-  output[["log_file"]] <- log_file
-  output[["write_at"]] <- sprintf("%s/cv_wtn_cvL", write_at)
-  
-  # Generate write at folder
-  if(!dir.exists(output[["write_at"]])){dir.create(output[["write_at"]], recursive = T)}
-  
-  # Write log
-  cat("Creating acr cross validation data ------------------",
-      file = log_file,
-      sep = "\n")
-  
-  # Produce data
-  if (execute){
-    set.seed(NULL)
-    out <- list()
-    out_2 <- NULL
-    
-    geno <- unique(pheno_data$Geno_new)
-    ngeno <- length(geno)
-    env <- unique(pheno_data$Env)
-    nenv <- length(env)
-    
-    pheno_data_idx <- pheno_data
-    
-    for (i in 1:runs){
-      outdata <- list()
-      ins_name <- paste0("cvL_run_", i)
-      
-      # test geno
-      test_geno <- as.vector(geno[sample(1:ngeno, (test_prop)*ngeno)])
-      # test env
-      ## figure out the distribution of test genotypes in the data
-      test_geno_dist_0 <- pheno_data_idx %>% filter(Geno_new %in% test_geno) %>% 
-        count(Env, latlong) %>%
-        arrange(n) %>%
-        filter(n > 50) # select only those environments and site which have more than 50 genotypes
-      
-      test_site_dist <- test_geno_dist_0 %>%
-        select(-n) %>%
-        count(latlong) %>%
-        filter(n > 1) # select only those sites which have more than 1 environment
-      
-      test_geno_dist <- test_geno_dist_0 %>%
-        filter(latlong %in% test_site_dist$latlong) # adjust initial list 
-      
-      test_env <- test_geno_dist %>% group_by(latlong) %>% 
-        filter(row_number() == sample(1:n(), 1, replace = FALSE)) %>%
-        ungroup() %>% pull(Env) %>%
-        as.character() # take one environment per location randomly
-      
-      # train env and geno
-      test_data <- pheno_data_idx %>%
-        filter(Geno_new %in% test_geno & Env %in% test_env)
-      
-      train_data <- pheno_data_idx %>%
-        filter(Geno_new %!in% test_data$Geno_new & latlong %in% test_data$latlong) %>%
-        filter(Env %!in% test_data$Env)
-      
-      outdata[["test"]] <- test_data %>% pull(idx_cv) %>% as.vector()
-      outdata[["train"]] <- train_data %>% pull(idx_cv) %>% as.vector()
-      outdata[["run_name"]] <- ins_name
-      
-      meta_info <- data.frame("connect" = ins_name,
-                              "cv" = "cvL",
-                              "run" = i, 
-                              "train" = length(outdata[["train"]]),
-                              "test" = length(outdata[["test"]]),
-                              "test_cv1_env_subset" = NA,
-                              "train_env" = test_data %>% pull(Env)  %>% unique() %>% length(),
-                              "train_geno" = test_data %>% pull(Geno_new) %>% unique() %>% length(),
-                              "test_env" = test_data%>% pull(Env)  %>% unique() %>% length(),
-                              "test_geno" = test_data %>% pull(Geno_new) %>% unique() %>% length())
-      
-      out[[ins_name]] <- outdata
-      out_2 <- rbind(out_2, meta_info)
-    }
-    
-    # Produce output
-    output[["run_info"]] <- out
-    output[["run_type"]] <- "cv_wtn_cvL"
-    output[["run_meta"]] <- out_2
-    
-    return(output)
-  } else {
-    print("No cross-validation data was generated")
-    return(NULL)
-  }
-}
-
-cv_wtn_trsz <- function(data, runs, test_prop){
-  # Sequester data
-  log_file <- data[["log_file"]]
-  write_at <- data[["write_at"]]
-  pheno_data <- data[["pheno_data_wtn"]]
-  
-  # Produce output
-  output <- list()
-  output[["log_file"]] <- log_file
-  output[["write_at"]] <- sprintf("%s/cv_wtn_trsz", write_at)
-  
-  # Generate write at folder
-  if(!dir.exists(output[["write_at"]])){dir.create(output[["write_at"]], recursive = T)}
-  
-  # Write log
-  cat("Creating acr cross validation data ------------------",
-      file = log_file,
-      sep = "\n")
-  
-  # Produce data
-  if (execute){
-    geno <- unique(pheno_data$Geno_new)
-    ngeno <- length(geno)
-    env <- unique(pheno_data$Env)
-    nenv <- length(env)
-    
-    out <- list()
-    set.seed(NULL)
-    out_2 <- NULL
-    for(i in 1:runs){
-      outdata <- list()
-      # test geno
-      test_geno <- as.vector(geno[sample(1:ngeno, (test_prop)*ngeno)])
-      # test env
-      ## figure out the distribution of test genotypes in the data
-      test_geno_dist <- pheno_data %>% filter(Geno_new %in% test_geno) %>% 
-        count(Env) %>%
-        arrange(n) %>%
-        filter(n > 50) # select only those environments which have more than 50 genotypes
-      target_test_env <- test_geno_dist %>% pull(Env)
-      n_target_test_env <- length(target_test_env)
-      test_env <- as.vector(target_test_env[sample(1:n_target_test_env, round((test_prop) *nenv))])
-      # train env and geno
-      train_geno <- setdiff(geno, test_geno)
-      train_env <- as.vector(env[which(env %!in% test_env)])
-      
-      quad_4_index <- pheno_data %>%
-        filter(Geno_new %in% test_geno & Env %in% test_env) %>%
-        pull(idx_cv) %>% as.vector()
-      
-      quad_3_index <- pheno_data %>%
-        filter(Geno_new %in% test_geno & Env %in% train_env) %>%
-        pull(idx_cv) %>% as.vector()
-      
-      quad_2_index <- pheno_data %>%
-        filter(Geno_new %in% train_geno & Env %in% test_env) %>%
-        pull(idx_cv) %>% as.vector()
-      
-      quad_1_index <- pheno_data %>%
-        filter(Geno_new %in% train_geno & Env %in% train_env) %>%
-        pull(idx_cv) %>% as.vector()
-      
-      for(j in c("cv1", "cv2", "cv3", "cv4")){
-        
-        # create common train data and specific test data for cv1
-        test_train_split <- 0.2
-        split_by_env <- pheno_data %>%
-          filter(idx_cv %in% quad_1_index)
-        env_to_consider <- split_by_env %>% count(Env)
-        geno_to_consider <- split_by_env %>% count(Geno_new)
-        env_thr <- round(test_train_split*nrow(env_to_consider))
-        geno_thr <- round(test_train_split*nrow(geno_to_consider))
-        critical_thr <- round(quantile(env_to_consider$n)[[3]]) #round(geno_thr/env_thr)
-        split_by_env_sub <- env_to_consider %>% filter(n > critical_thr) %>% 
-          pull(Env)
-        valid_test_data <- split_by_env %>% filter(Env %in% split_by_env_sub)
-        test_set_cv1 <- valid_test_data[sample(1:nrow(valid_test_data),   test_train_split*length(quad_1_index)), ] %>% pull(idx_cv) %>% as.vector()
-        # here i count genotypes per environment, remove those environments with counts less  than 50th quantile and finally sample from the data corresponding to the selected environments.
-        
-        ## Add test set
-        if(j == "cv1"){
-          ##cv1
-          outdata[["test"]] <- test_set_cv1
-          test_cv1_env_subset <- length(split_by_env_sub)
-          #sum(unique(c(outdata$train, outdata$test)) %in% quad_1_index) # sanity check
-          env_with_low_geno <- pheno_data[outdata[["test"]], ] %>% count(Env) %>% filter(n <  50)
-          if(nrow(env_with_low_geno) != 0){print(paste0(instance_name, " has ", nrow  (env_with_low_geno), " environments with low number of genotypes"))}
-        }
-        if(j == "cv2"){
-          ##cv2
-          outdata[["test"]] <- sort(quad_2_index)
-        }
-        if(j == "cv3"){
-          ##cv3
-          outdata[["test"]] <- sort(quad_3_index)
-        }
-        if(j == "cv4"){
-          ##cv4
-          outdata[["test"]] <- sort(c(quad_4_index))
-        }
-        
-        # Add train set
-        test_cv1_env_subset <- NA
-        train_idx <- quad_1_index[quad_1_index %!in% test_set_cv1]
-        train_env_fin <- pheno_data[train_idx, ] %>% distinct(Env) %>% pull(Env)
-        train_env_fin_n <- train_env_fin %>% length()
-        
-        ## Create splits of training set based on number of environments
-        #train_env_fin_n <- 36
-        needed_comb <- seq(2, 16, 2)
-        if(needed_comb[length(needed_comb)] < train_env_fin_n){
-          comb <- c(needed_comb, train_env_fin_n)
-        } else {
-          excess <- which(needed_comb >= train_env_fin_n)
-          needed_comb_mod <- needed_comb[-excess]
-          comb <- c(needed_comb_mod, train_env_fin_n)
-        }
-        names(comb) <- c(paste0("tr_", comb[1:(length(comb) - 1)]), "all")
-        
-        for (trsz in names(comb)) {
-          instance_name <- sprintf("run_%s_%s_%s", i, j, trsz)
-          outdata[["run_name"]] <- instance_name
-          
-          tr_envs <- as.integer(comb[trsz])
-          all_env <- as.vector(train_env_fin)
-          tr_envs_smp <- sample(all_env, size = tr_envs, replace = FALSE)
-          train_env_idx <- pheno_data[train_idx, ] %>%
-            filter(Env %in% tr_envs_smp) %>%
-            pull(idx_cv) %>%
-            as.vector()
-          train_env_idx_geno <- pheno_data[train_env_idx, ] %>%
-            pull(Geno_new) %>%
-            unique() %>%
-            length()
-          
-          while (train_env_idx_geno < 300) {
-            tr_envs_smp <- sample(all_env, size = tr_envs, replace = FALSE)
-            train_env_idx <- pheno_data[train_idx, ] %>%
-              filter(Env %in% tr_envs_smp) %>%
-              pull(idx_cv) %>%
-              as.vector()
-            train_env_idx_geno <- pheno_data[train_env_idx, ] %>%
-              pull(Geno_new) %>%
-              unique() %>%
-              length()
-          }
-          
-          outdata[["train"]] <- train_env_idx
-
-          ## generate output
-          meta_info <- data.frame("connect" = instance_name,
-                                  "cv" = j,
-                                  "run" = i, 
-                                  "train" = length(outdata[["train"]]),
-                                  "test" = length(outdata[["test"]]),
-                                  "test_cv1_env_subset" = test_cv1_env_subset,
-                                  "train_env" = pheno_data[outdata[["train"]], ] %>% pull(Env)  %>% unique() %>% length(),
-                                  "train_geno" = pheno_data[outdata[["train"]], ] %>% pull  (Geno_new) %>% unique() %>% length(),
-                                  "test_env" = pheno_data[outdata[["test"]], ] %>% pull(Env)  %>% unique() %>% length(),
-                                  "test_geno" = pheno_data[outdata[["test"]], ] %>% pull  (Geno_new) %>% unique() %>% length())
-          out[[instance_name]] <- outdata
-          out_2 <- rbind(out_2, meta_info)
-        }
-      }
-    }
-    
-    # Produce output
-    output[["run_info"]] <- out
-    output[["run_type"]] <- "cv_wtn_trsz"
-    output[["run_meta"]] <- out_2
-    
     return(output)
   } else {
     print("No cross-validation data was generated")

@@ -41,11 +41,22 @@ Once the environment is set up, you can start R and run subprojects using the {t
 # Start R
 R
 
-# Inside R
+# Set basic directory structure
+project_path <- "/proj" 
+
+# Please note that each sub projects tries to run from /proj root directory. This 
+#is mapped to KIBREED_public. You may need to modify run scripts accordingly. 
+
+dirs <- c("results/R", "results/Py", "logs/R", "logs/Py", "tmp_data/R", "tmp_data/Py")
+sapply(file.path(project_path, dirs), function(x) {
+  if (!dir.exists(x)) dir.create(x, recursive = TRUE)
+})
+
+# Run sub projects
 proj_list <- names(yaml::read_yaml("_targets.yaml"))
 proj_list
 # [1] "generate_prediction_data" "process_R_pred_data"
-# [3] "get_vars"                 "feature_importance"
+# [3] "get_vars"
 
 # Set the subproject you want to run
 Sys.setenv("TAR_PROJECT" = proj_list[1])
@@ -56,16 +67,27 @@ library(targets)
 # Confirm the project name
 Sys.getenv("TAR_PROJECT")
 
-# Run the pipeline
-tar_make()
+# View planned targets
+tar_manifest() # each name is a target to be run
+
+# Run the sub project pipeline completely
+tar_make() 
+
+# Run the sub project pipeline one target at a time
+tar_make(names = "target_name") # from names in tar_manifest
 
 ```
 
 ## Example code 1: Genomic prediction for genotypic values averaged across environments
+project "generate_prediction_data" generates the files needed for genomic predictions.
+you need to run the files to generate the output, which is stored in /proj/results
+project "process_R_pred_data" processes the output and generates the figures. 
+project "get_vars" shows how variances were calculated. it also generates corresponding figures. 
 
 ## Example code 2: Genomic prediction for genotypic values within environments
-
-## Example code 3: Generating feature importance scores for core set
+project "generate_prediction_data" generates the files needed for genomic predictions.
+you need to run the files to generate the output, which is stored in /proj/results
+project "process_R_pred_data" Processes the output and generates the figures. 
 
 ## License
 
