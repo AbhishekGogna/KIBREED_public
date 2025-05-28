@@ -4,11 +4,9 @@ project_path <- "/proj"
 
 # Define packages needed and default storage format for intermittent data
 
-tar_option_set(packages = c("dplyr", "readr", "ggplot2", 
-                            "tidyr", "reshape2", "stringr",
-                            "lubridate", "hablar", "readxl",
-                            "AGHmatrix",
-                            "qs", "feather", "jsonlite", "cvTools"),
+tar_option_set(packages = c("dplyr", "ggplot2", "tidyr", "stringr",
+                            "hablar", "qs", "jsonlite", "cvTools",
+                            "tibble", "BGLR"),
                format = "qs")
 
 run_name <- "generate_prediction_data"

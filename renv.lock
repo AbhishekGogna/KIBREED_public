@@ -9,18 +9,6 @@
     ]
   },
   "Packages": {
-    "AGHmatrix": {
-      "Package": "AGHmatrix",
-      "Version": "2.1.0",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Requirements": [
-        "Matrix",
-        "R",
-        "zoo"
-      ],
-      "Hash": "946b147e8953638717eac2eafa5b2288"
-    },
     "BBmisc": {
       "Package": "BBmisc",
       "Version": "1.13",
@@ -37,7 +25,7 @@
     },
     "BGLR": {
       "Package": "BGLR",
-      "Version": "1.1.0",
+      "Version": "1.1.4",
       "Source": "Repository",
       "Repository": "CRAN",
       "Requirements": [
@@ -46,7 +34,7 @@
         "methods",
         "truncnorm"
       ],
-      "Hash": "69b548fe8cd11ecbb70e464a8b36bf53"
+      "Hash": "c393859362c37fe05ffc5ef06e8f1f97"
     },
     "DEoptimR": {
       "Package": "DEoptimR",
@@ -416,20 +404,6 @@
       ],
       "Hash": "3f038e5ac7f41d4ac41ce658c85e3042"
     },
-    "cluster": {
-      "Package": "cluster",
-      "Version": "2.1.6",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Requirements": [
-        "R",
-        "grDevices",
-        "graphics",
-        "stats",
-        "utils"
-      ],
-      "Hash": "0aaa05204035dc43ea0004b9c76611dd"
-    },
     "codetools": {
       "Package": "codetools",
       "Version": "0.2-18",
@@ -453,19 +427,6 @@
         "stats"
       ],
       "Hash": "f20c47fd52fae58b4e377c37bb8c335b"
-    },
-    "corehunter": {
-      "Package": "corehunter",
-      "Version": "3.2.2",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Requirements": [
-        "R",
-        "methods",
-        "naturalsort",
-        "rJava"
-      ],
-      "Hash": "0feb74c5b1fe1f504465f0188ff994f1"
     },
     "corrplot": {
       "Package": "corrplot",
@@ -1243,13 +1204,6 @@
       ],
       "Hash": "6dfe8bf774944bd5595785e3229d8771"
     },
-    "naturalsort": {
-      "Package": "naturalsort",
-      "Version": "0.1.3",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Hash": "2e48674f7d0ab0a3ace4eba2c1145001"
-    },
     "nlme": {
       "Package": "nlme",
       "Version": "3.1-152",
@@ -1553,17 +1507,6 @@
         "survival"
       ],
       "Hash": "47a0047c3082b2a285434db2eb418dcc"
-    },
-    "rJava": {
-      "Package": "rJava",
-      "Version": "1.0-6",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Requirements": [
-        "R",
-        "methods"
-      ],
-      "Hash": "0415819f6baa75d86d52483f7292b623"
     },
     "readr": {
       "Package": "readr",
@@ -2065,21 +2008,6 @@
       "Source": "Repository",
       "Repository": "CRAN",
       "Hash": "0d0056cc5383fbc240ccd0cb584bf436"
-    },
-    "zoo": {
-      "Package": "zoo",
-      "Version": "1.8-12",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Requirements": [
-        "R",
-        "grDevices",
-        "graphics",
-        "lattice",
-        "stats",
-        "utils"
-      ],
-      "Hash": "5c715954112b45499fb1dadc6ee6ee3e"
     }
   }
 }
