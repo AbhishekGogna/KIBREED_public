@@ -44,7 +44,7 @@ wtn_models <- data.frame(models =  paste0("M_", 1:length(models_wtn)),
 list(
   tar_target(
     name = pred_acr_objects,
-    command = create_pred_acr_objects(existing_data_path = sprintf("%s/%s", project_path, "data/data_pub.qs"),
+    command = create_pred_acr_objects(existing_data_path = sprintf("%s/%s", project_path, "data"),
                                       write_at = sprintf("%s/results/R/%s", project_path, run_name),
                                       log_at = sprintf("%s/logs/R/%s", project_path, run_name),
                                       tmp_at = sprintf("%s/tmp_data/R/%s", project_path, run_name),
@@ -74,7 +74,7 @@ list(
   ),
   tar_target(
     name = pred_wtn_objects,
-    command = create_pred_wtn_objects(existing_data_path = sprintf("%s/%s", project_path, "data/data_pub.qs"),
+    command = create_pred_wtn_objects(existing_data_path = sprintf("%s/%s", project_path, "data"),
                                       write_at = sprintf("%s/results/R/%s", project_path, run_name),
                                       log_at = sprintf("%s/logs/R/%s", project_path, run_name),
                                       tmp_at = sprintf("%s/tmp_data/R/%s", project_path, run_name)

@@ -91,7 +91,7 @@ write_run_data <- function(run_meta,
     save_info <- list()
     cv_run_folder <- paste0(sprintf("%s/%s", run_data_at, cv_id))
     create_dir_file(cv_run_folder, file = FALSE)
-    for (sub_dirs in c("ext_dir", "preds", "logs")){
+    for (sub_dirs in c("tmp_data", "preds", "logs")){
       sub_dir_path <- paste0(cv_run_folder, "/", sub_dirs)
       save_info[[sub_dirs]] <- sub_dir_path   
       create_dir_file(sub_dir_path, file = FALSE)
@@ -249,8 +249,9 @@ compute_and_save_matrix <- function(matrix_name, matrix_expr, geno, write_at) {
   return(matrix_obj)
 }
 
-perfom_eigen_decompositions <- function(g_data,
-                                        g_data_dom,
+perfom_eigen_decompositions <- function(g_data_kin,
+                                        g_aa_mat_kin,
+                                        d_mat,
                                         log_at,
                                         write_at){
   # Put a log file
@@ -266,7 +267,6 @@ perfom_eigen_decompositions <- function(g_data,
         sep = "\n",
         append = T)
     
-    g_data_kin <- Gmatrix(as.matrix(g_data), method = "VanRaden", integer = FALSE, )
     G_a_mat <- compute_and_save_matrix(
       "evd_a_mat",
       g_data_kin,  
@@ -280,7 +280,6 @@ perfom_eigen_decompositions <- function(g_data,
         append = T)
     
     # Compute and save G_aa_mat
-    g_aa_mat_kin <- g_data_kin * g_data_kin
     G_aa_mat <- compute_and_save_matrix(
       "evd_aa_mat",
       g_aa_mat_kin,
@@ -294,8 +293,6 @@ perfom_eigen_decompositions <- function(g_data,
         append = T)
     
     # Compute and save G_d_mat
-    d_mat_0 <- g_data_dom %*% t(g_data_dom)
-    d_mat <- d_mat_0 / mean(diag(d_mat_0))
     G_d_mat <- compute_and_save_matrix(
       "evd_d_mat",
       d_mat,
@@ -309,8 +306,8 @@ perfom_eigen_decompositions <- function(g_data,
         append = T)
   } else {
     G_a_mat <- qread(sprintf("%s/evd_a_mat.qs", write_at))
-    G_aa_mat <- qread(sprintf("%s/evd_a_mat.qs", write_at)) 
-    G_d_mat <- qread(sprintf("%s/evd_a_mat.qs", write_at))
+    G_aa_mat <- qread(sprintf("%s/evd_aa_mat.qs", write_at)) 
+    G_d_mat <- qread(sprintf("%s/evd_d_mat.qs", write_at))
   }
   
   
@@ -367,10 +364,10 @@ create_pred_acr_objects <- function(existing_data_path,
   create_dir_file(write_at, file = FALSE)
   
   # Sequester data
-  existing_data <- qread(existing_data_path)
-  pheno_data_acr <- existing_data[["pheno_data_acr"]]
-  g_a_data <- existing_data[["geno_data_a"]]
-  g_d_data <- existing_data[["geno_data_d"]]
+  pheno_data_acr <- qread(sprintf("%s/pheno_data_acr.qs", existing_data_path))
+  g_a_data <- qread(sprintf("%s/grm_a.qs", existing_data_path))
+  g_aa_data <- qread(sprintf("%s/grm_aa.qs", existing_data_path))
+  g_d_data <- qread(sprintf("%s/grm_d.qs", existing_data_path))
   # space for any last minute alliterations
   
   # Generate output
@@ -379,6 +376,7 @@ create_pred_acr_objects <- function(existing_data_path,
   out[["write_at"]] <- write_at
   out[["pheno_data_acr"]] <- pheno_data_acr
   out[["g_a_data"]] <- g_a_data
+  out[["g_aa_data"]] <- g_aa_data
   out[["g_d_data"]] <- g_d_data
   
   return(out)
@@ -392,6 +390,7 @@ cv_acr_5f <- function(data, runs, folds){
   write_at <- data[["write_at"]]
   pheno_data <- data[["pheno_data_acr"]]
   g_a_data <- data[["g_a_data"]]
+  g_aa_data <- data[["g_aa_data"]]
   g_d_data <- data[["g_d_data"]]
   
   # Produce output
@@ -455,8 +454,9 @@ cv_acr_5f <- function(data, runs, folds){
     geno_order <- pheno_data %>% distinct(unique_idx, connect_geno_data) %>%
       #filter(row_number() < 101) %>%
       pull(connect_geno_data) %>% as.vector()
-    eigen_paths <- perfom_eigen_decompositions(g_data = g_a_data[geno_order, ],
-                                               g_data_dom = g_d_data[geno_order, ],
+    eigen_paths <- perfom_eigen_decompositions(g_data_kin = g_a_data[geno_order, geno_order],
+                                               g_aa_mat_kin = g_aa_data[geno_order, geno_order],
+                                               d_mat = g_d_data[geno_order, geno_order],
                                                log_at = log_file,
                                                write_at = sprintf("%s/eigen_data", out[["write_at"]]))
     
@@ -604,8 +604,7 @@ create_pred_wtn_objects <- function(existing_data_path,
       sep = "\n")
 
   # Sequester data
-  existing_data <- qread(existing_data_path)
-  pheno_data_wtn <- existing_data[["pheno_data_wtn"]]
+  pheno_data_wtn <- qread(sprintf("%s/pheno_data_wtn.qs", existing_data_path))
 
   # Generate output
   out <- list()
