@@ -21,6 +21,8 @@ if (!file.exists(file.path(project_dir, "renv"))) {
 
 # Restore the environment from the lock file
 cat("Restoring R packages from renv.lock...\n")
+Sys.setenv(LC_ALL = "C")
+options(install.packages.compile.from.source = "never")
 renv::restore(lockfile = lockfile_path, prompt = FALSE)
 
 cat("All packages restored successfully from renv.lock.\n")
