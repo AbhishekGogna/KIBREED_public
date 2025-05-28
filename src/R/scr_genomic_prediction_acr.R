@@ -76,7 +76,7 @@ log_appender(appender_file(log_at))
 
 # load data
 run_data <- read_json(sprintf("/proj/%s/generate_prediction_data/%s/%s.json", ext_parse, cv_type, cv_type))
-pheno_data <- qread("/proj/data/data_pub.qs")[["pheno_data_acr"]]
+pheno_data <- qread("/proj/data/pheno_data_acr.qs")
 G_a_path <- sprintf("/proj/%s/generate_prediction_data/%s/eigen_data/evd_a_mat.qs", ext_parse, cv_type)
 G_aa_path <- sprintf("/proj/%s/generate_prediction_data/%s/eigen_data/evd_aa_mat.qs", ext_parse, cv_type)
 G_d_path <- sprintf("/proj/%s/generate_prediction_data/%s/eigen_data/evd_d_mat.qs", ext_parse, cv_type)

@@ -68,7 +68,7 @@ sapply(file.path(project_path, dirs), function(x) {
 
 # View available subprojects
 proj_list <- names(yaml::read_yaml("_targets.yaml"))
-# Available projects: "generate_prediction_data", "process_R_pred_data", "get_vars", "feature_importance"
+# Available projects: "generate_prediction_data", "process_R_pred_data", "feature_importance"
 
 # Set the subproject to run
 Sys.setenv("TAR_PROJECT" = proj_list[1])
