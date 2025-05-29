@@ -147,7 +147,7 @@ Console messages like *"run_50_cv1 has 6 environments with low number of genotyp
 
 Uses predicted values of the core set to derive clusters of environments based on predicted GxE (Genotype × Environment) patterns.
 
-**Output Location:** `/proj/results/R/feature_importance`
+**Output Location:** `/proj/results/R/env_clusters`
 
 #### Output Files
 
