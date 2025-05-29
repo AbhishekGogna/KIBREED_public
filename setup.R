@@ -42,9 +42,9 @@ yaml_content <- paste0(
   "process_R_pred_data:\n",
   "  script: ", project_path, "/run/R/process_R_pred_data.R\n",
   "  store: ", project_path, "/store/process_R_pred_data\n",
-  "feature_importance:\n",
-  "  script: ", project_path, "/run/R/feature_importance.R\n",
-  "  store: ", project_path, "/store/feature_importance\n",
+  "env_clusters:\n",
+  "  script: ", project_path, "/run/R/env_clusters.R\n",
+  "  store: ", project_path, "/store/env_clusters\n",
   "\n"  # Empty line at the end
 )
 

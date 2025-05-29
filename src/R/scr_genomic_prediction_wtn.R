@@ -1,6 +1,12 @@
 #!/usr/bin/env Rscript
 
-source("/proj/renv/activate.R")
+if (dir.exists("/proj")) {
+  project_path <- "/proj"
+} else {
+  project_path <- getwd() # assumes that this script is run from KIBREED_public
+}
+
+source(sprintf("%s/renv/activate.R", project_path)) # loads previously defined environment
 
 # R version 4.0.5
 args = commandArgs(trailingOnly=TRUE)
@@ -181,11 +187,11 @@ return_elements <- function(element, pheno_data, paths,
   return(output)
 }
 
-# to_debug
+# define variables and file paths
 if (in_cc){
   ext_parse <- "results/R"
-  write_at <- sprintf("/proj/results/R/generate_prediction_data/%s/run_data/%s", cv_type, cv_id)
-} else {
+  write_at <- sprintf("%s/results/R/generate_prediction_data/%s/run_data/%s", project_path, cv_type, cv_id)
+} else { 
   stop()
 }
 
@@ -219,18 +225,16 @@ if(sum(unlist(lapply(from_cran, function(x) suppressPackageStartupMessages(requi
 # register the log file for further logs
 log_appender(appender_file(log_at))
 
-# load necessary data
-log_info(sprintf("ext parse = %s", ext_parse))
-
-kibreed_data_blues_within <- qread("/proj/data/pheno_data_wtn.qs")
-run_data <- read_json(sprintf("/proj/%s/generate_prediction_data/%s/%s.json", ext_parse, cv_type, cv_type))
+# load data
+kibreed_data_blues_within <- qread(sprintf("%s/data/pheno_data_wtn.qs", project_path))
+run_data <- read_json(sprintf("%s/%s/generate_prediction_data/%s/%s.json", project_path, ext_parse, cv_type, cv_type))
 
 paths <- list(
-  "G_a_RM" = "/proj/data/grm_a.qs", # based on genetic data
-  "G_d_RM" = "/proj/data/grm_d.qs", # based on genetic data
-  "G_aa_RM" = "/proj/data/grm_aa.qs", # based on genetic data
-  "ERM_l" = "/proj/data/erm_l.qs", # based on environment data
-  "ERM_nl" = "/proj/data/erm_nl.qs" # based on environment data
+  "G_a_RM" = sprintf("%s/data/grm_a.qs", project_path), # based on genetic data
+  "G_d_RM" = sprintf("%s/data/grm_d.qs", project_path), # based on genetic data
+  "G_aa_RM" = sprintf("%s/data/grm_aa.qs", project_path), # based on genetic data
+  "ERM_l" = sprintf("%s/data/erml_l.qs", project_path), # based on environment data
+  "ERM_nl" = sprintf("%s/data/erm_nl.qs", project_path) # based on environment data
 )
 
 log_info("All data loaded")

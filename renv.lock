@@ -198,16 +198,6 @@
       ],
       "Hash": "4f57884290cc75ab22f4af9e9d4ca862"
     },
-    "askpass": {
-      "Package": "askpass",
-      "Version": "1.2.0",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Requirements": [
-        "sys"
-      ],
-      "Hash": "cad6cf7f1d5f6e906700b9d3e718c796"
-    },
     "backports": {
       "Package": "backports",
       "Version": "1.4.1",
@@ -251,13 +241,6 @@
         "utils"
       ],
       "Hash": "9fe98599ca456d6552421db0d6772d8f"
-    },
-    "bitops": {
-      "Package": "bitops",
-      "Version": "1.0-7",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Hash": "b7d8d8ee39869c18d8846a184dd8a1af"
     },
     "boot": {
       "Package": "boot",
@@ -481,16 +464,6 @@
       ],
       "Hash": "e8a1e41acf02548751f45c718d55aa6a"
     },
-    "curl": {
-      "Package": "curl",
-      "Version": "5.2.0",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Requirements": [
-        "R"
-      ],
-      "Hash": "ce88d13c0b10fe88a37d9c59dba2d7f9"
-    },
     "cvTools": {
       "Package": "cvTools",
       "Version": "0.3.2",
@@ -514,22 +487,6 @@
         "methods"
       ],
       "Hash": "b4c06e554f33344e044ccd7fdca750a9"
-    },
-    "dendextend": {
-      "Package": "dendextend",
-      "Version": "1.17.1",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Requirements": [
-        "R",
-        "datasets",
-        "ggplot2",
-        "magrittr",
-        "stats",
-        "utils",
-        "viridis"
-      ],
-      "Hash": "043fafb791081fc553f29021bd0a9a01"
     },
     "desc": {
       "Package": "desc",
@@ -740,34 +697,6 @@
       ],
       "Hash": "141e061a5a68d463f11a4b5819ef0357"
     },
-    "ggmap": {
-      "Package": "ggmap",
-      "Version": "4.0.0",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Requirements": [
-        "R",
-        "bitops",
-        "cli",
-        "digest",
-        "dplyr",
-        "ggplot2",
-        "glue",
-        "grid",
-        "httr",
-        "jpeg",
-        "magrittr",
-        "plyr",
-        "png",
-        "purrr",
-        "rlang",
-        "scales",
-        "stringr",
-        "tibble",
-        "tidyr"
-      ],
-      "Hash": "031b5eab3c43bf1a7cea0498e4d89233"
-    },
     "ggplot2": {
       "Package": "ggplot2",
       "Version": "3.4.4",
@@ -950,21 +879,6 @@
       ],
       "Hash": "b59377caa7ed00fa41808342002138f9"
     },
-    "httr": {
-      "Package": "httr",
-      "Version": "1.4.7",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Requirements": [
-        "R",
-        "R6",
-        "curl",
-        "jsonlite",
-        "mime",
-        "openssl"
-      ],
-      "Hash": "ac107251d9d9fd72f0ca8049988f1d7f"
-    },
     "igraph": {
       "Package": "igraph",
       "Version": "1.4.1",
@@ -1004,16 +918,6 @@
         "utils"
       ],
       "Hash": "8954069286b4b2b0d023d1b288dce978"
-    },
-    "jpeg": {
-      "Package": "jpeg",
-      "Version": "0.1-10",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Requirements": [
-        "R"
-      ],
-      "Hash": "031a0b683d001a7519202f0628fc0358"
     },
     "jsonlite": {
       "Package": "jsonlite",
@@ -1164,22 +1068,6 @@
       ],
       "Hash": "bd4a6c4b600f58651d60d381b0e9a397"
     },
-    "mime": {
-      "Package": "mime",
-      "Version": "0.12",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "RemoteType": "standard",
-      "RemotePkgRef": "mime",
-      "RemoteRef": "mime",
-      "RemoteRepos": "https://cran.rstudio.com",
-      "RemotePkgPlatform": "source",
-      "RemoteSha": "0.12",
-      "Requirements": [
-        "tools"
-      ],
-      "Hash": "18e9c28c1d3ca1560ce30658b22ce104"
-    },
     "minqa": {
       "Package": "minqa",
       "Version": "1.2.5",
@@ -1246,16 +1134,6 @@
         "R"
       ],
       "Hash": "df58958f293b166e4ab885ebcad90e02"
-    },
-    "openssl": {
-      "Package": "openssl",
-      "Version": "2.1.1",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Requirements": [
-        "askpass"
-      ],
-      "Hash": "2a0dc8c6adfb6f032e4d4af82d258ab5"
     },
     "patchwork": {
       "Package": "patchwork",
@@ -1371,16 +1249,6 @@
         "Rcpp"
       ],
       "Hash": "d744387aef9047b0b48be2933d78e862"
-    },
-    "png": {
-      "Package": "png",
-      "Version": "0.1-8",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Requirements": [
-        "R"
-      ],
-      "Hash": "bd54ba8a0a5faded999a7aab6e46b374"
     },
     "polynom": {
       "Package": "polynom",
@@ -1730,13 +1598,6 @@
       ],
       "Hash": "6b7453cd9bb32b12577c78d54eeea56a"
     },
-    "sys": {
-      "Package": "sys",
-      "Version": "3.4.2",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Hash": "3a1be13d68d47a8cd0bfd74739ca1555"
-    },
     "targets": {
       "Package": "targets",
       "Version": "1.2.2",
@@ -1907,19 +1768,6 @@
         "rlang"
       ],
       "Hash": "d0ef2856b83dc33ea6e255caf6229ee2"
-    },
-    "viridis": {
-      "Package": "viridis",
-      "Version": "0.6.4",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Requirements": [
-        "R",
-        "ggplot2",
-        "gridExtra",
-        "viridisLite"
-      ],
-      "Hash": "80cd127bc8c9d3d9f0904ead9a9102f1"
     },
     "viridisLite": {
       "Package": "viridisLite",

@@ -1,6 +1,12 @@
 #!/usr/bin/env Rscript
 
-source("/proj/renv/activate.R") # loads previously defined environment
+if (dir.exists("/proj")) {
+  project_path <- "/proj"
+} else {
+  project_path <- getwd() # assumes that this script is run from KIBREED_public
+}
+
+source(sprintf("%s/renv/activate.R", project_path)) # loads previously defined environment
 
 # R version 4.0.5
 args = commandArgs(trailingOnly=TRUE)
@@ -12,6 +18,13 @@ model_name = args[[3]]
 model_spec = args[[4]]
 in_cc = as.logical(args[[5]])
 options(scipen = 999)
+
+# to dubug
+#cv_type = "cv_acr_5f" 
+#cv_id = "r_1_f_1"
+#model_name = "M_2"
+#model_spec = "G_a@BRR&G_d@BR"
+#in_cc = TRUE
 
 # Functions
 "%!in%" <- Negate("%in%")
@@ -32,7 +45,7 @@ load_mat <- function(type){
 # define variables and file paths
 if (in_cc){
   ext_parse <- "results/R"
-  write_at <- sprintf("/proj/results/R/generate_prediction_data/%s/run_data/%s", cv_type, cv_id)
+  write_at <- sprintf("%s/results/R/generate_prediction_data/%s/run_data/%s", project_path, cv_type, cv_id)
 } else { 
   stop()
 }
@@ -55,7 +68,7 @@ dump_at <- paste0(dump_dir, "/", model_name, "_")
 nIter <- 15000
 burnIn <- 2000
 
-# define needed packages
+# generate environment
 from_cran <- c("dplyr",
                "tidyr",
                "stringr",
@@ -75,11 +88,11 @@ if(sum(unlist(lapply(from_cran, function(x) suppressPackageStartupMessages(requi
 log_appender(appender_file(log_at))
 
 # load data
-run_data <- read_json(sprintf("/proj/%s/generate_prediction_data/%s/%s.json", ext_parse, cv_type, cv_type))
-pheno_data <- qread("/proj/data/pheno_data_acr.qs")
-G_a_path <- sprintf("/proj/%s/generate_prediction_data/%s/eigen_data/evd_a_mat.qs", ext_parse, cv_type)
-G_aa_path <- sprintf("/proj/%s/generate_prediction_data/%s/eigen_data/evd_aa_mat.qs", ext_parse, cv_type)
-G_d_path <- sprintf("/proj/%s/generate_prediction_data/%s/eigen_data/evd_d_mat.qs", ext_parse, cv_type)
+run_data <- read_json(sprintf("%s/%s/generate_prediction_data/%s/%s.json", project_path, ext_parse, cv_type, cv_type))
+pheno_data <- qread(sprintf("%s/data/pheno_data_acr.qs", project_path))
+G_a_path <- sprintf("%s/%s/generate_prediction_data/%s/eigen_data/evd_a_mat.qs", project_path, ext_parse, cv_type)
+G_aa_path <- sprintf("%s/%s/generate_prediction_data/%s/eigen_data/evd_aa_mat.qs", project_path, ext_parse, cv_type)
+G_d_path <- sprintf("%s/%s/generate_prediction_data/%s/eigen_data/evd_d_mat.qs", project_path, ext_parse, cv_type)
 log_info("All data loaded")
 
 # generate run data
@@ -98,19 +111,21 @@ p_data_0 <- pheno_data %>% mutate(obs = BLUEs) %>% rename(idx_col = idx_col) %>%
   distinct(idx_col, .keep_all = TRUE)
 
 p_data <- p_data_0 %>%
-  mutate(BLUEs = ifelse(present_in == "inTest" | present_in == "Nowhere", NA, BLUEs), # This is needed since i account for any genotype occuring in test set as a result of sampling scheme
-         Type = as.character(Type)) %>%    # Convert 'Type' column to character type
-  mutate(Type = ifelse(Type != "Hybrid", "Non_hybrid", Type)) %>%  # Replace non-"Hybrid" values with "Non_hybrid"
-  mutate(Type = as.factor(Type), # Convert 'Type' column to a factor
-         run_name = run_name) %>%
-  rename(series = Series,
-         geno = Geno_new,
-         type = Type,
-         blues = BLUEs) %>%
-  select(run_name, series, type, 
-         geno, idx_col, 
-         connect_geno_data,
-         blues, obs, present_in)
+  mutate(
+    BLUEs = ifelse(present_in %in% c("inTest", "Nowhere"), NA, BLUEs),  # This is needed since i account for any genotype occuring in test set as a result of sampling scheme
+    Type = as.character(Type) %>% 
+      {ifelse(. != "Hybrid", "Non_hybrid", .)} %>% 
+      as.factor(),
+    run_name = run_name
+  ) %>%
+  rename(
+    series = Series,
+    geno = Geno_new,
+    type = Type,
+    blues = BLUEs
+  ) %>%
+  select(run_name, series, type, geno, idx_col, 
+         connect_geno_data, blues, obs, present_in)
 
 geno_order <- p_data %>% pull(connect_geno_data) %>% as.character()
 matrices <- unlist(lapply(str_split(str_split(model_spec, "&")[[1]], "@"), function(x) x[[1]]))

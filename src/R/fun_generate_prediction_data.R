@@ -343,8 +343,7 @@ perfom_eigen_decompositions <- function(g_data_kin,
 create_pred_acr_objects <- function(existing_data_path,
                                     write_at,
                                     log_at,
-                                    tmp_at,
-                                    subset){
+                                    tmp_at){
   
   # Put a log file
   run_instance <- as.character(format(Sys.time(),  format = "%d_%m_%Y_%H_%M"))
@@ -365,19 +364,11 @@ create_pred_acr_objects <- function(existing_data_path,
   create_dir_file(write_at, file = FALSE)
   
   # Sequester data
-  pheno_data_acr_full <- qread(sprintf("%s/pheno_data_acr.qs", existing_data_path))
+  pheno_data_acr <- qread(sprintf("%s/pheno_data_acr.qs", existing_data_path))
   g_a_data <- qread(sprintf("%s/grm_a.qs", existing_data_path))
   g_aa_data <- qread(sprintf("%s/grm_aa.qs", existing_data_path))
   g_d_data <- qread(sprintf("%s/grm_d.qs", existing_data_path))
   # space for any last minute alliterations
-  
-  # Subset data
-  if(subset){
-    pheno_data_acr <- pheno_data_acr_full %>%
-      slice_sample(n = 1000, replace = FALSE)
-  } else {
-    pheno_data_acr <- pheno_data_acr_full
-  }
   
   # Generate output
   out <- list()
@@ -598,8 +589,7 @@ cv_acr_sce <- function(data, take_parts){
 create_pred_wtn_objects <- function(existing_data_path,
                                     write_at,
                                     log_at,
-                                    tmp_at,
-                                    subset){  
+                                    tmp_at){  
   # Put a log file
   run_instance <- as.character(format(Sys.time(),  format = "%d_%m_%Y_%H_%M"))
   log_at <- sprintf("%s/%s", log_at, run_instance)
@@ -615,22 +605,7 @@ create_pred_wtn_objects <- function(existing_data_path,
       sep = "\n")
 
   # Sequester data
-  pheno_data_wtn_full <- qread(sprintf("%s/pheno_data_wtn.qs", existing_data_path))
-  
-  # Subset data
-  if(subset == TRUE){
-    # Get 100 unique values from the connect_geno column
-    unique_genos <- pheno_data_wtn_full %>%
-      pull(connect_geno) %>%
-      unique() %>%
-      sample(1000)
-    
-    # Then filter the dataframe to only include those values
-    pheno_data_wtn <- pheno_data_wtn_full %>%
-      filter(connect_geno %in% unique_genos)
-  } else {
-    pheno_data_wtn <- pheno_data_wtn_full
-  }
+  pheno_data_wtn <- qread(sprintf("%s/pheno_data_wtn.qs", existing_data_path))
 
   # Generate output
   out <- list()

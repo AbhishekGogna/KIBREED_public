@@ -72,7 +72,7 @@ sapply(file.path(project_path, dirs), function(x) {
 
 # View available subprojects
 proj_list <- names(yaml::read_yaml("_targets.yaml"))
-# Available projects: "generate_prediction_data", "process_R_pred_data", "feature_importance"
+# Available projects: "generate_prediction_data", "process_R_pred_data", "env_clusters"
 
 # Set the subproject to run
 Sys.setenv("TAR_PROJECT" = proj_list[1])
@@ -143,11 +143,16 @@ Console messages like *"run_50_cv1 has 6 environments with low number of genotyp
 
 ### Example 3: Environment Clustering Analysis
 
-**Project:** `feature_importance`
+**Project:** `env_clusters`
 
 Uses predicted values of the core set to derive clusters of environments based on predicted GxE (Genotype × Environment) patterns.
 
-**Output Location:** `/proj/results`
+**Output Location:** `/proj/results/R/feature_importance`
+
+#### Output Files
+
+- **`kmeans_n_clust.png`** - Shows elbow and silhouette plots to detect optimal number of clusters
+- **`clust_plot*.png`** - Shows identified environment clusters
 
 ## License
 
