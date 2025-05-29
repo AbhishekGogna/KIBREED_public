@@ -61,7 +61,7 @@ get_random_string <- function(length) {
 write_run_data <- function(run_meta,
                            write_path, # relative path of base_directory
                            run_script_at, # relative path of run_script
-                           user_dir = "/proj"){ # absolute path switch
+                           user_dir){ # absolute path switch
   
   # Chunk for bash master files
   bash_cmd <- 'nohup Rscript %s "%s" "%s" "%s" "%s" "%s" > %s/cc_%s.log 2> %s/cc_%s.err &' # for the file to run from inside the container
@@ -122,9 +122,9 @@ write_run_data <- function(run_meta,
   
   # Make hidden files if they do not exist
   rprofile_file <- paste0(user_dir, "/.Rprofile")
-  if(!file.exists("/proj/.Rprofile")) {
+  if(!file.exists(paste0(user_dir, "/.Rprofile"))) {
     file.create(rprofile_file, recursive = TRUE)
-    cat('if(getwd() == "/proj") source("renv/activate.R")\n', file = rprofile_file)
+    cat('if(getwd() == "', user_dir, '") source("renv/activate.R")\n', file = rprofile_file, sep = "")
   }
   
   for (master_script_path in names(master_script_data)) {
@@ -149,9 +149,9 @@ write_run_data <- function(run_meta,
 generate_run_scripts <- function(data, 
                                  run_script_at, 
                                  input_data_at, 
-                                 empty_past,
                                  model_info,
-                                 wtn = FALSE){
+                                 wtn = FALSE,
+                                 project_path){
   # Sequester data
   log_file <- data[["log_file"]]
   write_at <- data[["write_at"]]
@@ -216,7 +216,8 @@ generate_run_scripts <- function(data,
   # Create run data
   run_data <- write_run_data(run_meta = run_meta,
                              write_path = write_at, # relative path of base_directory
-                             run_script_at = run_script_at) # relative path of run_script
+                             run_script_at = run_script_at,
+                             user_dir = project_path) # relative path of run_script
   # Generate output
   out <- list()
   out[["log_file"]] <- log_file
@@ -314,8 +315,8 @@ perfom_eigen_decompositions <- function(g_data_kin,
   file_list <- c(G_a_mat$matrix_save_at, G_aa_mat$matrix_save_at, G_d_mat$matrix_save_at)
   write_check <- all(file.exists(unlist(file_list)))
   
-  order_check_a <- sum(G_a_mat[["eigen"]][["geno"]] == rownames(g_data)) == nrow(g_data)
-  order_check_d <- sum(G_d_mat[["eigen"]][["geno"]] == rownames(g_data_dom)) == nrow(g_data_dom)
+  order_check_a <- sum(G_a_mat[["eigen"]][["geno"]] == rownames(g_data_kin)) == nrow(g_data_kin)
+  order_check_d <- sum(G_d_mat[["eigen"]][["geno"]] == rownames(d_mat)) == nrow(d_mat)
   order_check <- all(order_check_a,
                      order_check_d)
   
@@ -343,7 +344,7 @@ create_pred_acr_objects <- function(existing_data_path,
                                     write_at,
                                     log_at,
                                     tmp_at,
-                                    run_name){
+                                    subset){
   
   # Put a log file
   run_instance <- as.character(format(Sys.time(),  format = "%d_%m_%Y_%H_%M"))
@@ -364,11 +365,19 @@ create_pred_acr_objects <- function(existing_data_path,
   create_dir_file(write_at, file = FALSE)
   
   # Sequester data
-  pheno_data_acr <- qread(sprintf("%s/pheno_data_acr.qs", existing_data_path))
+  pheno_data_acr_full <- qread(sprintf("%s/pheno_data_acr.qs", existing_data_path))
   g_a_data <- qread(sprintf("%s/grm_a.qs", existing_data_path))
   g_aa_data <- qread(sprintf("%s/grm_aa.qs", existing_data_path))
   g_d_data <- qread(sprintf("%s/grm_d.qs", existing_data_path))
   # space for any last minute alliterations
+  
+  # Subset data
+  if(subset){
+    pheno_data_acr <- pheno_data_acr_full %>%
+      slice_sample(n = 1000, replace = FALSE)
+  } else {
+    pheno_data_acr <- pheno_data_acr_full
+  }
   
   # Generate output
   out <- list()
@@ -477,6 +486,7 @@ cv_acr_sce <- function(data, take_parts){
   write_at <- data[["write_at"]]
   pheno_data <- data[["pheno_data_acr"]]
   g_a_data <- data[["g_a_data"]]
+  g_aa_data <- data[["g_aa_data"]]
   g_d_data <- data[["g_d_data"]]
   
   # Produce output
@@ -566,8 +576,9 @@ cv_acr_sce <- function(data, take_parts){
       #filter(row_number() < 101) %>%
       pull(connect_geno_data) %>% as.vector()
     
-    eigen_paths <- perfom_eigen_decompositions(g_data = g_a_data[geno_order, ],
-                                               g_data_dom = g_d_data[geno_order, ],
+    eigen_paths <- perfom_eigen_decompositions(g_data_kin = g_a_data[geno_order, geno_order],
+                                               g_aa_mat_kin = g_aa_data[geno_order, geno_order],
+                                               d_mat = g_d_data[geno_order, geno_order],
                                                log_at = log_file,
                                                write_at = sprintf("%s/eigen_data", out[["write_at"]]))
     
@@ -588,7 +599,7 @@ create_pred_wtn_objects <- function(existing_data_path,
                                     write_at,
                                     log_at,
                                     tmp_at,
-                                    run_name){  
+                                    subset){  
   # Put a log file
   run_instance <- as.character(format(Sys.time(),  format = "%d_%m_%Y_%H_%M"))
   log_at <- sprintf("%s/%s", log_at, run_instance)
@@ -604,7 +615,22 @@ create_pred_wtn_objects <- function(existing_data_path,
       sep = "\n")
 
   # Sequester data
-  pheno_data_wtn <- qread(sprintf("%s/pheno_data_wtn.qs", existing_data_path))
+  pheno_data_wtn_full <- qread(sprintf("%s/pheno_data_wtn.qs", existing_data_path))
+  
+  # Subset data
+  if(subset == TRUE){
+    # Get 100 unique values from the connect_geno column
+    unique_genos <- pheno_data_wtn_full %>%
+      pull(connect_geno) %>%
+      unique() %>%
+      sample(1000)
+    
+    # Then filter the dataframe to only include those values
+    pheno_data_wtn <- pheno_data_wtn_full %>%
+      filter(connect_geno %in% unique_genos)
+  } else {
+    pheno_data_wtn <- pheno_data_wtn_full
+  }
 
   # Generate output
   out <- list()

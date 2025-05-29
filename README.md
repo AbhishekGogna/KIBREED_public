@@ -38,7 +38,7 @@ Restore the R package environment using `renv` and the `renv.lock` file:
 Rscript setup.R
 ```
 
-Once completed, your R environment will be automatically activated when you start R.
+Once completed, your R environment will be automatically activated when you start R. If that does not happen check the .Rprofile file.
 
 ### Setup Notes
 
@@ -55,10 +55,14 @@ After environment setup, use the {targets} pipeline system to run subprojects:
 R
 
 # Set basic directory structure
-project_path <- "/proj" 
+if (dir.exists("/proj")) {
+  project_path <- "/proj"
+} else {
+  project_path <- getwd() # assumes that this script is run from KIBREED_public
+}
 
 # Note: Each subproject runs from /proj root directory, mapped to KIBREED_public
-# You may need to modify run scripts accordingly
+# You may need to modify run scripts accordingly.
 
 # Create required directories
 dirs <- c("results/R", "results/Py", "logs/R", "logs/Py", "tmp_data/R", "tmp_data/Py")
@@ -132,7 +136,7 @@ Generates files for genomic predictions with genotypic values within specific en
 
 #### Important Notes
 
-Console messages like *"run_50_cv1 has 6 environments with low number of genotypes"* indicate that after the 80:20 quadrant 1 split, some test environments contain fewer than 50 genotypes. Check logs for detailed counts per environment. In testing, these typically contained more than 40 genotypes, which is acceptable.
+Console messages like *"run_50_cv1 has 6 environments with low number of genotypes"* indicate that after the 80:20 quadrant 1 split, some test environments contain fewer than 50 genotypes. Check logs for detailed counts per environment. In testing without subsetting, these typically contained more than 40 genotypes, which is acceptable.
 
 **Related Project:**
 - **`process_R_pred_data`** - Processes prediction output and generates visualization figures

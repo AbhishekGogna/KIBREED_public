@@ -1,6 +1,11 @@
 library(targets)
 
-project_path <- "/proj"
+# Set basic directory structure
+if (dir.exists("/proj")) {
+  project_path <- "/proj"
+} else {
+  project_path <- getwd() # assumes that this script is run from KIBREED_public
+}
 
 # Define packages needed and default storage format for intermittent data
 
@@ -18,10 +23,7 @@ models_acr <- c("G_a@BRR",
                 "G_a@BRR&G_d@BRR", 
                 "G_a@BRR&G_d@BRR&G_aa@BRR")
 acr_models <- data.frame(models = paste0("M_", 1:length(models_acr)),
-                         model_specs = models_acr,
-                         cpu = sapply(models_acr, function(x) length(strsplit(x, "&")[[1]]), USE.NAMES = F),
-                         memory = c(50, 50, 70),
-                         time = "1-0:0:0")
+                         model_specs = models_acr)
 
 # wtn models
 models_wtn <- c("E_i@BRR&G_i@BRR", # M_1
@@ -33,10 +35,7 @@ models_wtn <- c("E_i@BRR&G_i@BRR", # M_1
                 )
 
 wtn_models <- data.frame(models =  paste0("M_", 1:length(models_wtn)),
-                         model_specs = models_wtn,
-                         cpu = sapply(models_wtn, function(x) length(strsplit(x, "&")[[1]]), USE.NAMES = F),
-                         mem = c(30, 50, 100, 200, 100, 200),
-                         time = "2-0:0:0")
+                         model_specs = models_wtn)
 
 # define pipeline #to run fresh try deleting sub directories in results, tmp_data and logs
 list(
@@ -46,7 +45,7 @@ list(
                                       write_at = sprintf("%s/results/R/%s", project_path, run_name),
                                       log_at = sprintf("%s/logs/R/%s", project_path, run_name),
                                       tmp_at = sprintf("%s/tmp_data/R/%s", project_path, run_name),
-                                      run_name = run_name)
+                                      subset = TRUE) # to test the code
   ),
   tar_target(
     name = cv_acr_5f_data,
@@ -57,7 +56,8 @@ list(
     command = generate_run_scripts(data = cv_acr_5f_data,
                                    run_script_at = sprintf("%s/src/R/scr_genomic_prediction_acr.R", project_path),
                                    input_data_at = sprintf("%s/results/R", project_path),
-                                   model_info = acr_models)
+                                   model_info = acr_models,
+                                   project_path = project_path)
   ),
   tar_target(
     name = cv_acr_sce_data,
@@ -68,15 +68,16 @@ list(
     command = generate_run_scripts(data = cv_acr_sce_data,
                                    run_script_at = sprintf("%s/src/R/scr_genomic_prediction_acr.R", project_path),
                                    input_data_at = sprintf("%s/results/R", project_path),
-                                   model_info = acr_models)
+                                   model_info = acr_models,
+                                   project_path = project_path)
   ),
   tar_target(
     name = pred_wtn_objects,
     command = create_pred_wtn_objects(existing_data_path = sprintf("%s/%s", project_path, "data"),
                                       write_at = sprintf("%s/results/R/%s", project_path, run_name),
                                       log_at = sprintf("%s/logs/R/%s", project_path, run_name),
-                                      tmp_at = sprintf("%s/tmp_data/R/%s", project_path, run_name)
-                                      )
+                                      tmp_at = sprintf("%s/tmp_data/R/%s", project_path, run_name),
+                                      subset = TRUE) # to test the code
   ),
   tar_target(
     name = cv_wtn_tra_data,
@@ -87,7 +88,8 @@ list(
     command = generate_run_scripts(data = cv_wtn_tra_data,
                                    run_script_at = sprintf("%s/src/R/scr_genomic_prediction_wtn.R", project_path),
                                    input_data_at = sprintf("%s/results/R", project_path),
-                                   model_info = wtn_models[1:6, ],
-                                   wtn = TRUE)
+                                   model_info = wtn_models,
+                                   wtn = TRUE,
+                                   project_path = project_path)
   )
 )
