@@ -154,7 +154,7 @@ Uses predicted values of the core set to derive clusters of environments based o
 - **`kmeans_n_clust.png`** - Shows Elbow and Silhouette plots to detect optimal number of clusters
  - **Elbow plot** - Within-cluster sum of squares (WSS) vs. number of clusters
    - Blue line: Minimum clusters ensuring ≥3 environments per cluster
-   - Green line: Last point before WCSS begins to increase (local minimum)
+   - Green line: Last point before WSS begins to increase (local minimum)
  - **Silhouette plot** - Silhouette scores vs. number of clusters  
    - Blue/Green lines: Reference points from elbow plot analysis
    - Red line: Maximum silhouette score
