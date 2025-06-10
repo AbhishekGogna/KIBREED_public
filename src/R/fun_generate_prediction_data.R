@@ -511,19 +511,6 @@ cv_acr_sce <- function(data, take_parts){
     
     scenarios <- NULL
     
-    for (i in series_numbers){
-      vals <- cbind("test" = i, "train" = series_numbers)
-      vals <- vals[vals[,"test"] != vals[, "train"], ]
-      extension <- matrix(NA, nrow(vals), length(series_numbers))
-      for(j in 1:nrow(vals)){
-        extension[j, vals[j, "test"]] <- 1
-        extension[j, vals[j, "train"]] <- 2
-      }
-      scenarios <- rbind(scenarios, cbind(1, extension))
-    } # one exp series as train all others as train in a given instance
-    
-    colnames(scenarios) <- c("scenario", series)
-    
     for (sce in series_numbers[1:(length(series_numbers)-1)]){
       scenario_train <- t(combn(series_numbers, sce))
       
@@ -534,10 +521,12 @@ cv_acr_sce <- function(data, take_parts){
         extension[i, -scenario_train[i, ]] <- 2
       }
       
-      scenarios <- rbind(scenarios, cbind((sce+1), extension))
-    } # 2 to total number of series experimental series as train and others as test in a  given instance. 
+      scenarios <- rbind(scenarios, cbind((sce), extension))
+    } # 2 to total number of series experimental series as train (1) and others as test (2) in a  given instance. 
     
-    scenarios <- as_tibble(scenarios) %>% mutate(row = row_number())
+    colnames(scenarios) <- c("scenario", series)
+    
+    scenarios <- as_tibble(scenarios) %>% mutate(row = row_number()) 
     
     for (run in 1:nrow(scenarios)){
       scenario_data <- scenarios %>% filter(row == run) %>%
@@ -580,6 +569,7 @@ cv_acr_sce <- function(data, take_parts){
                                                write_at = sprintf("%s/eigen_data", out[["write_at"]]))
     
     # Add generated data to output object
+    out[["scenarios"]] <- scenarios
     out[["run_info"]] <- save_data
     out[["run_type"]] <- "cv_acr_sce"
     
