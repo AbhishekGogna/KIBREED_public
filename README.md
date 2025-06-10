@@ -6,6 +6,7 @@ A genomic prediction project for plant breeding applications using R and Python 
 
 - **R**: Version 4.0.5
 - **Python**: Version 3.8.11
+- The inptu files must be downloaded from figshare and put at /path/to/KIBREED_public/data
 
 ## Environment Setup
 
