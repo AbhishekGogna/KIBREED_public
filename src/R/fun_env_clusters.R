@@ -124,7 +124,7 @@ get_env_clusters <- function(existing_data_path, write_at, log_at){
   n_ss <- as.numeric(names(max_ss))
     
   n_clust_qual <- sapply(wss_values, function(x) x[["min_size"]])
-  n_clust_0 <- n_clust_qual[which(n_clust_qual >= 3)]
+  n_clust_0 <- n_clust_qual[which(n_clust_qual >= 3)] # these clusters have a minimum of 3 environemtns per cluster
   n_clust <- as.numeric(names(n_clust_0[length(n_clust_0)]))
   wss_vals <- as.numeric(sapply(wss_values, function(x) x[["wss"]]))
   # Initialize a variable to store the kink
@@ -139,7 +139,7 @@ get_env_clusters <- function(existing_data_path, write_at, log_at){
     }
   }
   
-  kink_fin <- kink - 1
+  kink_fin <- kink - 1 # this cluster is the last one to which the values drop before rising. 
   
   kmean_n_clust <- data.frame("clusters" = k.values,
                               "wss" = wss_vals) %>%

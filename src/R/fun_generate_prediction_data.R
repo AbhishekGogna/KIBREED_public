@@ -406,11 +406,17 @@ cv_acr_5f <- function(data, runs, folds){
       file = log_file,
       sep = "\n",
       append = TRUE)
-  
+
   # Produce data
   
   n_idx <- length(unique(pheno_data$unique_idx))
   check_for_presence <- sum(pheno_data$unique_idx %in% 1:n_idx)
+  
+  # add idx to pheno data
+  pheno_data_mod <- pheno_data %>%
+    group_by(unique_idx) %>%
+    mutate(idx = row_number()) %>%
+    ungroup()
   
   if (execute & check_for_presence) {
     save_data <- list()
