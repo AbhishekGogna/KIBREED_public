@@ -6,7 +6,6 @@ A genomic prediction project for plant breeding applications using R and Python 
 
 - **R**: Version 4.0.5
 - **Python**: Version 3.8.11
-- The inptu files must be downloaded from figshare and put at /path/to/KIBREED_public/data
 
 ## Environment Setup
 
@@ -45,7 +44,7 @@ Once completed, your R environment will be automatically activated when you star
 
 - Run all commands from the project root directory
 - If you encounter version mismatch errors, ensure the correct versions are installed and available in your `$PATH`
-- The input data is available at [Dryad](https://datadryad.org/). Download those files and put them at `/path/to/KIBREED_public/data`
+- The input data is available at [FigShare](https://figshare.com/). Download those files and put them at `/path/to/KIBREED_public/data`
 
 ## Running R Subprojects with {targets}
 
