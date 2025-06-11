@@ -90,12 +90,6 @@ Rscript scr_genomic_prediction_acr.R
 - **`results/accuracy_summary_acr.qs`** - Accuracy summary by genotype type
 - **`logs/genomic_prediction_acr.log`** - Analysis log file
 
-#### Features
-- Random 80/20 train/test split
-- RKHS (Reproducing Kernel Hilbert Space) models
-- Accuracy calculated separately for Lines and Hybrids
-- Automatic cleanup of temporary files
-
 ### Example 2: Genomic Prediction Within Environments (WTN)
 
 **Script:** `scr_genomic_prediction_wtn.R`
@@ -124,35 +118,6 @@ The script defines 6 different model specifications:
 - **`results/model_specifications_wtn.qs`** - All model definitions for future use
 - **`logs/genomic_prediction_wtn.log`** - Analysis log file
 
-#### Features
-- CV3 cross-validation scenario (new genotypes in training environments)
-- Environmental relationship matrices (linear and non-linear)
-- G×E interaction modeling
-- Modular ETA component system
-- BRR and RKHS model combinations
-
-### Key Differences Between ACR and WTN
-
-| Aspect | ACR (Across) | WTN (Within) |
-|--------|--------------|--------------|
-| **Cross-validation** | 80/20 random split | CV3 scenario (genotype-environment combinations) |
-| **Complexity** | Simple genomic effects | Complex G×E interactions |
-| **Models** | 2 models (A+D, A+D+AA) | 6 model specifications available |
-| **Environment handling** | Averaged across environments | Environment-specific with G×E |
-| **Use case** | General genomic prediction | Environment-specific breeding decisions |
-
-### Configuration
-
-Both scripts include configuration parameters at the top that can be modified:
-
-```r
-# Example parameters (modify as needed)
-N_ITER <- 150    # can raise to 15000 for production
-BURN_IN <- 20    # can raise to 2000 for production  
-THIN <- 5
-TEST_PROPORTION <- 0.2  # ACR uses 0.2, WTN uses 0.33
-```
-
 ### Data Requirements
 
 Both scripts expect the following data files in the `data/` directory:
@@ -160,10 +125,6 @@ Both scripts expect the following data files in the `data/` directory:
 - `g_data_add.qs` - Additive genomic data
 - `g_data_dom.qs` - Dominance genomic data
 - `ev_data.qs` - Environmental data (WTN only)
-
-## Subsetting and Development
-
-The `v2_subsetting.R` script provides utilities for data subsetting during development and testing phases.
 
 ## License
 
