@@ -46,119 +46,124 @@ Once completed, your R environment will be automatically activated when you star
 - If you encounter version mismatch errors, ensure the correct versions are installed and available in your `$PATH`
 - The input data is available at [FigShare](https://figshare.com/). Download those files and put them at `/path/to/KIBREED_public/data`
 
-## Running R Subprojects with {targets}
+## Running Genomic Prediction Scripts
 
-After environment setup, use the {targets} pipeline system to run subprojects:
+After environment setup, you can run the genomic prediction analyses directly using the provided R scripts.
+
+### Required Directory Structure
 
 ```r
-# Start R
+# Start R from the project root
 R
 
-# Set basic directory structure
-if (dir.exists("/proj")) {
-  project_path <- "/proj"
-} else {
-  project_path <- getwd() # assumes that this script is run from KIBREED_public
-}
-
-# Note: Each subproject runs from /proj root directory, mapped to KIBREED_public
-# You may need to modify run scripts accordingly.
-
 # Create required directories
-dirs <- c("results/R", "results/Py", "logs/R", "logs/Py", "tmp_data/R", "tmp_data/Py")
-sapply(file.path(project_path, dirs), function(x) {
+dirs <- c("results", "tmp", "logs")
+sapply(dirs, function(x) {
   if (!dir.exists(x)) dir.create(x, recursive = TRUE)
 })
-
-# View available subprojects
-proj_list <- names(yaml::read_yaml("_targets.yaml"))
-# Available projects: "generate_prediction_data", "process_R_pred_data", "env_clusters"
-
-# Set the subproject to run
-Sys.setenv("TAR_PROJECT" = proj_list[1])
-
-# Load targets package
-library(targets)
-
-# View planned targets
-tar_manifest() # Each name is a target to be run
-
-# Run complete pipeline
-tar_make() 
-
-# Run specific target
-tar_make(names = "target_name") # Use names from tar_manifest()
 ```
+
+### Available Scripts
+
+1. **`scr_genomic_prediction_acr.R`** - Across environments genomic prediction
+2. **`scr_genomic_prediction_wtn.R`** - Within environments G×E genomic prediction
 
 ## Analysis Examples
 
-### Example 1: Genomic Prediction Across Environments
+### Example 1: Genomic Prediction Across Environments (ACR)
 
-**Project:** `generate_prediction_data`
+**Script:** `scr_genomic_prediction_acr.R`
 
-Generates files for genomic predictions with genotypic values averaged across environments.
+Performs genomic predictions with genotypic values averaged across environments using a simple 80/20 random cross-validation split.
 
-**Output Location:** `/proj/results/R/generate_prediction_data/cv_acr*`
+```bash
+# Run the script
+Rscript scr_genomic_prediction_acr.R
+```
 
-#### Output Files
-
-- **`cv_acr_5f.json`** - Train/test splits data
-- **`eigen_data/`** - Eigen decompositions used for predictions
-- **`master_files/`** - R scripts required for running predictions (must be executed to generate output)
-- **`run_data/`** - Directories for storing prediction results
-
-**Related Projects:**
-- **`process_R_pred_data`** - Processes prediction output and generates visualization figures
-- **`get_vars`** - Calculates variances and generates corresponding figures
-
-### Example 2: Genomic Prediction Within Environments
-
-**Project:** `generate_prediction_data`
-
-Generates files for genomic predictions with genotypic values within specific environments.
-
-**Output Location:** `/proj/results/R/generate_prediction_data/cv_wtn_tra`
+#### Models Included
+- **Model 1:** Additive + Dominance effects
+- **Model 2:** Additive + Dominance + Epistatic effects
 
 #### Output Files
+- **`results/prediction_results_acr.qs`** - Detailed prediction results
+- **`results/accuracy_summary_acr.qs`** - Accuracy summary by genotype type
+- **`logs/genomic_prediction_acr.log`** - Analysis log file
 
-- **`cv_wtn_tra.json`** - Train/test splits data
-- **`cv_wtn_tra_meta.txt`** - Metadata file containing:
-  - `connect` - CV identifier (combination of "cv" + "run")
-  - `train` - Data points in training set
-  - `test` - Data points in test set
-  - `train_env` - Environments in training set
-  - `train_geno` - Genotypes in training set
-  - `test_env` - Environments in test set
-  - `test_geno` - Genotypes in test set
-- **`cv_wtn_tra_sizes.png`** - Visualization of training and test set data points
-- **`master_files/`** - R scripts required for running predictions
-- **`run_data/`** - Directories for storing prediction results
+#### Features
+- Random 80/20 train/test split
+- RKHS (Reproducing Kernel Hilbert Space) models
+- Accuracy calculated separately for Lines and Hybrids
+- Automatic cleanup of temporary files
 
-#### Important Notes
+### Example 2: Genomic Prediction Within Environments (WTN)
 
-Console messages like *"run_50_cv1 has 6 environments with low number of genotypes"* indicate that after the 80:20 quadrant 1 split, some test environments contain fewer than 50 genotypes. Check logs for detailed counts per environment. In testing without subsetting, these typically contained more than 40 genotypes, which is acceptable.
+**Script:** `scr_genomic_prediction_wtn.R`
 
-**Related Project:**
-- **`process_R_pred_data`** - Processes prediction output and generates visualization figures
+Performs complex multi-environment G×E genomic predictions using CV3 cross-validation scenario with modular ETA components.
 
-### Example 3: Environment Clustering Analysis
+```bash
+# Run the script
+Rscript scr_genomic_prediction_wtn.R
+```
 
-**Project:** `env_clusters`
+#### Models Available
+The script defines 6 different model specifications:
+- **M1:** Basic environment + genotype effects
+- **M2:** Environment + genomic relationships (A+D+AA)
+- **M3:** Linear ERM + genomic relationships
+- **M4:** Linear ERM + genomics + G×E (additive×linear)
+- **M5:** Nonlinear ERM + genomic relationships
+- **M6:** Nonlinear ERM + genomics + G×E (additive×nonlinear)
 
-Uses predicted values of the core set to derive clusters of environments based on predicted GxE (Genotype × Environment) patterns.
-
-**Output Location:** `/proj/results/R/env_clusters`
+*Note: The script runs M1 and M6 as examples. Model specifications are saved for running additional models.*
 
 #### Output Files
+- **`results/prediction_results_wtn.qs`** - Detailed prediction results
+- **`results/accuracy_summary_wtn.qs`** - Accuracy summary by genotype type
+- **`results/model_specifications_wtn.qs`** - All model definitions for future use
+- **`logs/genomic_prediction_wtn.log`** - Analysis log file
 
-- **`kmeans_n_clust.png`** - Shows Elbow and Silhouette plots to detect optimal number of clusters
- - **Elbow plot** - Within-cluster sum of squares (WSS) vs. number of clusters
-   - Blue line: Minimum clusters ensuring ≥3 environments per cluster
-   - Green line: Last point before WSS begins to increase (local minimum)
- - **Silhouette plot** - Silhouette scores vs. number of clusters  
-   - Blue/Green lines: Reference points from elbow plot analysis
-   - Red line: Maximum silhouette score
-- **`clust_plot*.png`** - Shows identified environment clusters
+#### Features
+- CV3 cross-validation scenario (new genotypes in training environments)
+- Environmental relationship matrices (linear and non-linear)
+- G×E interaction modeling
+- Modular ETA component system
+- BRR and RKHS model combinations
+
+### Key Differences Between ACR and WTN
+
+| Aspect | ACR (Across) | WTN (Within) |
+|--------|--------------|--------------|
+| **Cross-validation** | 80/20 random split | CV3 scenario (genotype-environment combinations) |
+| **Complexity** | Simple genomic effects | Complex G×E interactions |
+| **Models** | 2 models (A+D, A+D+AA) | 6 model specifications available |
+| **Environment handling** | Averaged across environments | Environment-specific with G×E |
+| **Use case** | General genomic prediction | Environment-specific breeding decisions |
+
+### Configuration
+
+Both scripts include configuration parameters at the top that can be modified:
+
+```r
+# Example parameters (modify as needed)
+N_ITER <- 150    # can raise to 15000 for production
+BURN_IN <- 20    # can raise to 2000 for production  
+THIN <- 5
+TEST_PROPORTION <- 0.2  # ACR uses 0.2, WTN uses 0.33
+```
+
+### Data Requirements
+
+Both scripts expect the following data files in the `data/` directory:
+- `pheno_acr.qs` / `pheno_wtn.qs` - Phenotype data
+- `g_data_add.qs` - Additive genomic data
+- `g_data_dom.qs` - Dominance genomic data
+- `ev_data.qs` - Environmental data (WTN only)
+
+## Subsetting and Development
+
+The `v2_subsetting.R` script provides utilities for data subsetting during development and testing phases.
 
 ## License
 
