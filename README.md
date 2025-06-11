@@ -1,4 +1,4 @@
-# KIBREED
+# KIBREED_public
 
 A genomic prediction project for plant breeding applications using R and Python environments with specific version requirements.
 
