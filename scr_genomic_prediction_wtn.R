@@ -38,14 +38,14 @@ for (dir in dirs_to_create) {
 # Set up logging
 log_file <- paste0("logs/genomic_prediction_", PREDICTION_TYPE, ".log")
 
-write_log <- function(message, log_file_path) {
+write_log <- function(message, log_file_path, append = TRUE) {
   timestamp <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
   log_entry <- paste(timestamp, "-", message)
-  cat(log_entry, "\n", file = log_file_path, append = TRUE)
+  cat(log_entry, "\n", file = log_file_path, append = append)
   cat(log_entry, "\n")
 }
 
-write_log("Starting G×E genomic prediction analysis for WTN", log_file)
+write_log("Starting G×E genomic prediction analysis for WTN", log_file, append = FALSE)
 
 # =============================================================================
 # DATA LOADING
