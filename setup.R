@@ -34,19 +34,16 @@ if (dir.exists("/proj")) {
   project_path <- getwd()
 }
 
-# Create YAML content with correct paths
-yaml_content <- paste0(
-  "generate_prediction_data:\n",
-  "  script: ", project_path, "/run/R/generate_prediction_data.R\n",
-  "  store: ", project_path, "/store/generate_prediction_data\n",
-  "process_R_pred_data:\n",
-  "  script: ", project_path, "/run/R/process_R_pred_data.R\n",
-  "  store: ", project_path, "/store/process_R_pred_data\n",
-  "env_clusters:\n",
-  "  script: ", project_path, "/run/R/env_clusters.R\n",
-  "  store: ", project_path, "/store/env_clusters\n",
-  "\n"  # Empty line at the end
-)
+# Content to write to .Rprofile
+rprofile_content <- 'if (dir.exists("/proj")) {
+  project_path <- "/proj"
+} else {
+  project_path <- getwd() # assumes that this script is run from KIBREED_public
+}
+source(sprintf("%s/renv/activate.R", project_path))
+Sys.setenv(LC_ALL = "C")
+options(install.packages.compile.from.source = "never")'
 
-# Write to YAML file at project path
-writeLines(yaml_content, file.path(project_path, "_targets.yaml"))
+# Write to .Rprofile in the project directory
+rprofile_path <- file.path(project_path, ".Rprofile")
+writeLines(rprofile_content, rprofile_path)
