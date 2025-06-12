@@ -15,13 +15,13 @@ library(AGHmatrix)
 PREDICTION_TYPE <- "wtn"
 TEST_PROPORTION <- 0.33
 RANDOM_SEED <- 123
-N_ITER <- 150  # can raise to 15000 for production
-BURN_IN <- 20  # can raise to 2000 for production
 THIN <- 5
 
 # Subset parameters for debugging
-N_GENO_SUBSET <- 1000
-N_ENV_SUBSET <- 10
+N_GENO_SUBSET <- 1000 # Can be removed, but then script would need to be modified. 
+N_ENV_SUBSET <- 10 # Can be removed, but then script would need to be modified. 
+N_ITER <- 150  # can raise to 15000
+BURN_IN <- 20  # can raise to 2000
 
 # =============================================================================
 # SETUP AND INITIALIZATION
@@ -78,7 +78,7 @@ write_log("Setting up CV3 cross-validation...", log_file)
 geno_ori <- unique(pheno_data$Geno_n)
 env_ori <- unique(pheno_data$Env_n)
 
-# Subset for computational efficiency
+# Subset for debugging
 set.seed(RANDOM_SEED)
 sampled_geno <- sample(geno_ori, min(N_GENO_SUBSET, length(geno_ori)))
 sampled_envs <- sample(env_ori, min(N_ENV_SUBSET, length(env_ori)))
@@ -124,18 +124,15 @@ test_indices <- pheno_data_idx %>%
 # Prepare final dataset with CV splits
 pheno_data_idx <- pheno_data_idx %>%
   mutate(
-    cv_split = case_when(
+    set = case_when(
       idx_cv %in% train_indices ~ "train",
       idx_cv %in% test_indices ~ "test",
       TRUE ~ "unused"
     )
   ) %>%
-  filter(cv_split != "unused") %>%
-  mutate(observed = ifelse(cv_split == "train", BLUEs_wtn, NA)) %>%
+  filter(set != "unused") %>%
+  mutate(observed = ifelse(set == "train", BLUEs_wtn, NA)) %>%
   arrange(Env_n, Geno_n)
-
-# Prepare response variable
-y_train <- pheno_data_idx$observed
 
 # Update genotype and environment lists
 geno <- unique(pheno_data_idx$Geno_n)
@@ -234,7 +231,6 @@ ETA_components <- list(
 # Model specifications
 model_specifications <- list(
   M1 = list(
-    description = "Basic environment + genotype effects",
     eta = list(
       environment = ETA_components$E_i,
       genotype = ETA_components$G_i
@@ -242,7 +238,6 @@ model_specifications <- list(
   ),
   
   M2 = list(
-    description = "Environment + genomic relationships (A+D+AA)",
     eta = list(
       environment = ETA_components$E_i,
       additive = ETA_components$G_a,
@@ -252,7 +247,6 @@ model_specifications <- list(
   ),
   
   M3 = list(
-    description = "Linear ERM + genomic relationships",
     eta = list(
       environment_linear = ETA_components$ERM_l,
       additive = ETA_components$G_a,
@@ -262,7 +256,6 @@ model_specifications <- list(
   ),
   
   M4 = list(
-    description = "Linear ERM + genomics + G×E (additive×linear)",
     eta = list(
       environment_linear = ETA_components$ERM_l,
       additive = ETA_components$G_a,
@@ -273,7 +266,6 @@ model_specifications <- list(
   ),
   
   M5 = list(
-    description = "Nonlinear ERM + genomic relationships",
     eta = list(
       environment_nonlinear = ETA_components$ERM_nl,
       additive = ETA_components$G_a,
@@ -283,7 +275,6 @@ model_specifications <- list(
   ),
   
   M6 = list(
-    description = "Nonlinear ERM + genomics + G×E (additive×nonlinear)",
     eta = list(
       environment_nonlinear = ETA_components$ERM_nl,
       additive = ETA_components$G_a,
@@ -294,19 +285,25 @@ model_specifications <- list(
   )
 )
 
+# Clean up - keep config, functions, final data, and model specifications
+rm(list = setdiff(ls(), c("PREDICTION_TYPE", "TEST_PROPORTION", "RANDOM_SEED", 
+                          "N_ITER", "BURN_IN", "THIN", "N_GENO_SUBSET", 
+                          "N_ENV_SUBSET", "log_file", "write_log",
+                          "pheno_data_idx", "model_specifications")))
+
 # =============================================================================
 # MODEL FITTING FUNCTION
 # =============================================================================
 
 # Model fitting function
-fit_model <- function(model_name, ETA_list, y_response, pheno_data_subset, test_idx, 
+fit_model <- function(ETA_list, model_name, pheno_data_subset, 
                       n_iter, burn_in, thin, prediction_type, log_file_path) {
   
   write_log(paste("Fitting", model_name), log_file_path)
   
   t0 <- Sys.time()
   model <- BGLR(
-    y = y_response,
+    y = pheno_data_subset$observed,
     ETA = ETA_list,
     nIter = n_iter,
     burnIn = burn_in,
@@ -316,31 +313,28 @@ fit_model <- function(model_name, ETA_list, y_response, pheno_data_subset, test_
   )
   t1 <- Sys.time()
   
-  # Extract results for test set
-  test_results <- data.frame(
-    observed = pheno_data_subset$BLUEs_wtn[test_idx],
-    predicted = model$yHat[test_idx],
-    type = pheno_data_subset$Type[test_idx],
-    genotype = pheno_data_subset$Geno_n[test_idx],
-    environment = pheno_data_subset$Env_n[test_idx],
-    model = model_name,
-    prediction_type = prediction_type
-  )
+  # Extract results
+  results <- pheno_data_subset %>%
+    mutate(predicted = model$yHat,
+           model_name = model_name)
   
   # Calculate accuracy by type
-  accuracy <- test_results %>% 
-    group_by(type) %>% 
-    summarize(accuracy = cor(observed, predicted, use = "complete.obs"), .groups = "drop") %>%
+  accuracy <- results %>% 
+    filter(set == "test") %>%
+    group_by(Series, Type) %>% 
+    summarize(accuracy = cor(BLUEs_wtn, predicted, use = "complete.obs"), .groups = "drop") %>%
+    group_by(Type) %>%
+    summarize(accuracy_mean = mean(accuracy), .groups = "drop") %>%
     as.data.frame()
   
   runtime <- round(as.numeric(t1 - t0, units = "mins"), 2)
   write_log(paste(model_name, "completed in", runtime, "minutes"), log_file_path)
   
   for (i in 1:nrow(accuracy)) {
-    write_log(paste(model_name, accuracy$type[i], "accuracy:", round(accuracy$accuracy[i], 3)), log_file_path)
+    write_log(paste(model_name, accuracy$Type[i], "accuracy:", round(accuracy$accuracy[i], 3)), log_file_path)
   }
   
-  return(list(results = test_results, accuracy = accuracy, model = model))
+  return(list(results = results, accuracy = accuracy, model = model))
 }
 
 # =============================================================================
@@ -354,9 +348,19 @@ write_log("Running models...", log_file)
 model1_output <- fit_model(
   model_name = "M1",
   ETA_list = model_specifications$M1$eta,
-  y_response = y_train,
   pheno_data_subset = pheno_data_idx,
-  test_idx = test_indices,
+  n_iter = N_ITER,
+  burn_in = BURN_IN,
+  thin = THIN,
+  prediction_type = PREDICTION_TYPE,
+  log_file_path = log_file
+)
+
+# Run Model 6 (most complex)
+model6_output <- fit_model(
+  model_name = "M6",
+  ETA_list = model_specifications$M6$eta,
+  pheno_data_subset = pheno_data_idx,
   n_iter = N_ITER,
   burn_in = BURN_IN,
   thin = THIN,
@@ -368,21 +372,7 @@ model1_output <- fit_model(
 # SAVE RESULTS
 # =============================================================================
 
-# Run Model 6 (most complex)
-model6_output <- fit_model(
-  model_name = "M6",
-  ETA_list = model_specifications$M6$eta,
-  y_response = y_train,
-  pheno_data_subset = pheno_data_idx,
-  test_idx = test_indices,
-  n_iter = N_ITER,
-  burn_in = BURN_IN,
-  thin = THIN,
-  prediction_type = PREDICTION_TYPE,
-  log_file_path = log_file
-)
-
-# Save results
+# Combine all results
 all_results <- rbind(model1_output$results, model6_output$results)
 all_accuracy <- rbind(
   cbind(model1_output$accuracy, model = "M1_basic", prediction_type = PREDICTION_TYPE),
@@ -391,11 +381,9 @@ all_accuracy <- rbind(
 
 results_file <- paste0("results/prediction_results_", PREDICTION_TYPE, ".qs")
 accuracy_file <- paste0("results/accuracy_summary_", PREDICTION_TYPE, ".qs")
-models_file <- paste0("results/model_specifications_", PREDICTION_TYPE, ".qs")
 
 qsave(all_results, results_file)
 qsave(all_accuracy, accuracy_file)
-qsave(model_specifications, models_file)
 
 write_log("Analysis completed", log_file)
 
@@ -404,3 +392,7 @@ temp_files <- list.files("tmp", pattern = paste0(PREDICTION_TYPE, "_"), full.nam
 if (length(temp_files) > 0) {
   file.remove(temp_files)
 }
+
+# Final cleanup - keep only essential results for potential further analysis
+rm(list = setdiff(ls(), c("all_results", "all_accuracy", 
+                          "results_file", "accuracy_file", "log_file")))

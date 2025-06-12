@@ -16,12 +16,12 @@ library(AGHmatrix)
 PREDICTION_TYPE <- "acr"  # across environments
 TEST_PROPORTION <- 0.2
 RANDOM_SEED <- 123
-N_ITER <- 150  # can raise to 15000 for production
-BURN_IN <- 20  # can raise to 2000 for production
 THIN <- 5
 
 # Subset parameters for debugging
-N_GENO_SUBSET <- 1000
+N_GENO_SUBSET <- 1000 # Can be removed, but then script would need to be modified. 
+N_ITER <- 150  # can raise to 15000
+BURN_IN <- 20  # can raise to 2000
 
 # =============================================================================
 # SETUP AND INITIALIZATION
@@ -80,24 +80,12 @@ pheno_clean <- pheno_data %>%
   distinct(Geno_n, BLUEs_acr, Type) %>%
   filter(!is.na(BLUEs_acr)) %>%
   filter(Geno_n %in% sampled_geno) %>%
-  mutate(Type = ifelse(Type == "Hybrid", "Hybrid", "Line"))
+  mutate(idx_cv = row_number())
 
-# Match genotypes between phenotype and genomic data
-common_genos <- intersect(pheno_clean$Geno_n, rownames(geno_add))
+geno_add_final <- geno_add[pheno_clean$Geno_n, ]
+geno_dom_final <- geno_dom[pheno_clean$Geno_n, ]
 
-if (length(common_genos) == 0) {
-  stop("No common genotypes found between phenotype and genomic data")
-}
-
-# Subset data to common genotypes
-pheno_final <- pheno_clean %>%
-  filter(Geno_n %in% common_genos) %>%
-  arrange(Geno_n)
-
-geno_add_final <- geno_add[pheno_final$Geno_n, ]
-geno_dom_final <- geno_dom[pheno_final$Geno_n, ]
-
-write_log(paste("Final dataset:", nrow(pheno_final), "genotypes"), log_file)
+write_log(paste("Final dataset:", nrow(pheno_clean), "genotypes"), log_file)
 
 # =============================================================================
 # CROSS-VALIDATION SETUP
@@ -106,15 +94,15 @@ write_log(paste("Final dataset:", nrow(pheno_final), "genotypes"), log_file)
 write_log("Setting up cross-validation...", log_file)
 
 set.seed(RANDOM_SEED)
-n_total <- nrow(pheno_final)
+n_total <- nrow(pheno_clean)
 test_size <- round(n_total * TEST_PROPORTION)
-test_indices <- sample(1:n_total, test_size)
-train_indices <- setdiff(1:n_total, test_indices)
+test_indices <- sample(pheno_clean$idx_cv, test_size)
+train_indices <- setdiff(pheno_clean$idx_cv, test_indices)
 
-# Prepare response variable
-y <- pheno_final$BLUEs_acr
-y_train <- y
-y_train[test_indices] <- NA  # Set test observations to NA
+# Add to pheno data
+pheno_final <- pheno_clean %>%
+  mutate(set = ifelse(idx_cv %in% train_indices, "Train", "Test"),
+         observed = ifelse(idx_cv %in% train_indices, BLUEs_acr, NA))
 
 write_log(paste("Training set:", length(train_indices), "observations"), log_file)
 write_log(paste("Test set:", length(test_indices), "observations"), log_file)
@@ -135,54 +123,54 @@ G_dom <- YY_t / mean(diag(YY_t))
 # Epistatic kinship matrix (additive x additive)
 G_epi <- G_add * G_add
 
+# Clean up - keep config, functions, final data, and kinship matrices
+rm(list = setdiff(ls(), c("PREDICTION_TYPE", "TEST_PROPORTION", "RANDOM_SEED", 
+                          "N_ITER", "BURN_IN", "THIN", 
+                          "N_GENO_SUBSET", "log_file", "write_log",
+                          "pheno_final", "G_add", "G_dom", "G_epi")))
+
 # =============================================================================
 # MODEL FITTING FUNCTION
 # =============================================================================
 
-fit_and_extract <- function(ETA, model_name, model_label, y_response, pheno_data_final, 
-                            test_idx, n_total_obs, n_iter, burn_in, thin, 
-                            prediction_type, log_file_path) {
+# Model fitting function
+fit_model <- function(ETA_list, model_name, pheno_data_subset, 
+                      n_iter, burn_in, thin, prediction_type, log_file_path) {
   
   write_log(paste("Fitting", model_name), log_file_path)
   
   t0 <- Sys.time()
   model <- BGLR(
-    y = y_response,
-    ETA = ETA,
+    y = pheno_data_subset$observed,
+    ETA = ETA_list,
     nIter = n_iter,
     burnIn = burn_in,
     thin = thin,
-    saveAt = paste0("tmp/", prediction_type, "_", model_label, "_"),
+    saveAt = paste0("tmp/", prediction_type, "_", model_name, "_"),
     verbose = FALSE
   )
   t1 <- Sys.time()
   
   # Extract results
-  results <- data.frame(
-    genotype = pheno_data_final$Geno_n,
-    type = pheno_data_final$Type,
-    observed = pheno_data_final$BLUEs_acr,
-    predicted = model$yHat,
-    dataset = ifelse(1:n_total_obs %in% test_idx, "test", "train"),
-    model = model_label,
-    prediction_type = prediction_type
-  )
+  results <- pheno_data_subset %>%
+    mutate(predicted = model$yHat,
+           model_name = model_name)
   
-  # Calculate accuracy for test set only
-  test_accuracy <- results %>% 
-    filter(dataset == "test") %>%
-    group_by(type) %>% 
-    summarize(accuracy = cor(observed, predicted, use = "complete.obs"), .groups = "drop") %>%
+  # Calculate accuracy by type
+  accuracy <- results %>% 
+    filter(set == "Test") %>%
+    group_by(Type) %>% 
+    summarize(accuracy = cor(BLUEs_acr, predicted, use = "complete.obs"), .groups = "drop") %>%
     as.data.frame()
   
   runtime <- round(as.numeric(t1 - t0, units = "mins"), 2)
   write_log(paste(model_name, "completed in", runtime, "minutes"), log_file_path)
   
-  for (i in 1:nrow(test_accuracy)) {
-    write_log(paste(model_name, test_accuracy$type[i], "accuracy:", round(test_accuracy$accuracy[i], 3)), log_file_path)
+  for (i in 1:nrow(accuracy)) {
+    write_log(paste(model_name, accuracy$Type[i], "accuracy:", round(accuracy$accuracy[i], 3)), log_file_path)
   }
   
-  return(list(results = results, accuracy = test_accuracy, model = model))
+  return(list(results = results, accuracy = accuracy, model = model))
 }
 
 # =============================================================================
@@ -197,14 +185,10 @@ ETA_model1 <- list(
   dominance = list(K = G_dom, model = "RKHS")
 )
 
-model1_output <- fit_and_extract(
+model1_output <- fit_model(
+  model_name = "M1",
   ETA = ETA_model1,
-  model_name = "Model 1: Additive + Dominance",
-  model_label = "add_dom",
-  y_response = y_train,
-  pheno_data_final = pheno_final,
-  test_idx = test_indices,
-  n_total_obs = n_total,
+  pheno_data_subset = pheno_final,
   n_iter = N_ITER,
   burn_in = BURN_IN,
   thin = THIN,
@@ -219,14 +203,10 @@ ETA_model2 <- list(
   epistatic = list(K = G_epi, model = "RKHS")
 )
 
-model2_output <- fit_and_extract(
+model2_output <- fit_model(
+  model_name = "M2",
   ETA = ETA_model2,
-  model_name = "Model 2: Additive + Dominance + Epistatic",
-  model_label = "add_dom_epi",
-  y_response = y_train,
-  pheno_data_final = pheno_final,
-  test_idx = test_indices,
-  n_total_obs = n_total,
+  pheno_data_subset = pheno_final,
   n_iter = N_ITER,
   burn_in = BURN_IN,
   thin = THIN,
@@ -241,11 +221,10 @@ model2_output <- fit_and_extract(
 # Combine all results
 all_results <- rbind(model1_output$results, model2_output$results)
 all_accuracy <- rbind(
-  cbind(model1_output$accuracy, model = "add_dom", prediction_type = PREDICTION_TYPE),
-  cbind(model2_output$accuracy, model = "add_dom_epi", prediction_type = PREDICTION_TYPE)
+  cbind(model1_output$accuracy, model = "M1_basic", prediction_type = PREDICTION_TYPE),
+  cbind(model2_output$accuracy, model = "M2_complex", prediction_type = PREDICTION_TYPE)
 )
 
-# Save results
 results_file <- paste0("results/prediction_results_", PREDICTION_TYPE, ".qs")
 accuracy_file <- paste0("results/accuracy_summary_", PREDICTION_TYPE, ".qs")
 
@@ -259,3 +238,7 @@ temp_files <- list.files("tmp", pattern = paste0(PREDICTION_TYPE, "_"), full.nam
 if (length(temp_files) > 0) {
   file.remove(temp_files)
 }
+
+# Final cleanup - keep only essential results for potential further analysis
+rm(list = setdiff(ls(), c("all_results", "all_accuracy", 
+                          "results_file", "accuracy_file", "log_file")))
