@@ -201,6 +201,37 @@ ETA_components <- list(
 )
 
 # =============================================================================
+# EXPORT FILES FOR PYTHON INTEGRATION
+# =============================================================================
+
+write_log("Exporting files for Python integration...", log_file)
+
+# Export genomic data
+geno_df <- data.frame(
+  idx = rownames(geno_add_final),
+  geno_add_final,
+  row.names = NULL
+)
+
+write_feather(geno_df, 
+              file.path(project_path, "results", "g_data_add_wtn.feather"))
+
+# Export phenotype data
+write_feather(pred_data, file.path(project_path, "results", "pheno_final_wtn.feather"))
+
+# Export climate data
+env_df <- data.frame(
+  idx = rownames(ev_data[env, ]),
+  ev_data[env, ],
+  row.names = NULL
+)
+
+write_feather(env_df, 
+              file.path(project_path, "results", "ev_data_wtn.feather"))
+
+write_log("Files exported successfully for Python integration", log_file)
+
+# =============================================================================
 # MODEL SPECIFICATIONS
 # =============================================================================
 

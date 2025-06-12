@@ -8,6 +8,7 @@ library(BGLR)
 library(qs)
 library(dplyr)
 library(AGHmatrix)
+library(feather)
 
 # =============================================================================
 # CONFIGURATION PARAMETERS
@@ -113,6 +114,27 @@ pheno_final <- pheno_clean %>%
 
 write_log(paste("Training set:", length(train_indices), "observations"), log_file)
 write_log(paste("Test set:", length(test_indices), "observations"), log_file)
+
+# =============================================================================
+# EXPORT FILES FOR PYTHON INTEGRATION
+# =============================================================================
+
+write_log("Exporting files for Python integration...", log_file)
+
+# Export genomic data
+geno_df <- data.frame(
+  idx = rownames(geno_add_final),
+  geno_add_final,
+  row.names = NULL
+)
+
+write_feather(geno_df, 
+              file.path(project_path, "results", "g_data_add_acr.feather"))
+
+# Export phenotype data
+write_feather(pheno_final, file.path(project_path, "results", "pheno_final_acr.feather"))
+
+write_log("Files exported successfully for Python integration", log_file)
 
 # =============================================================================
 # KINSHIP MATRICES
