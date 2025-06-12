@@ -131,9 +131,9 @@ G_dom <- YY_t / mean(diag(YY_t))
 G_epi <- G_add * G_add
 
 # Clean up - keep config, functions, final data, and kinship matrices
-rm(list = setdiff(ls(), c("project_path", "PREDICTION_TYPE", "TEST_PROPORTION", "RANDOM_SEED", 
+rm(list = setdiff(ls(), c("project_path", "PREDICTION_TYPE", "RANDOM_SEED", 
                           "N_ITER", "BURN_IN", "THIN", 
-                          "N_GENO_SUBSET", "log_file", "write_log",
+                          "log_file", "write_log",
                           "pheno_final", "G_add", "G_dom", "G_epi")))
 
 # =============================================================================

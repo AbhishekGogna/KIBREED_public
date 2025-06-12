@@ -24,8 +24,7 @@ RANDOM_SEED <- 123
 THIN <- 5
 
 # Subset parameters for debugging
-N_GENO_SUBSET <- 1000 # Can be removed, but then script would need to be modified. 
-N_ENV_SUBSET <- 10 # Can be removed, but then script would need to be modified. 
+N_GENO_SUBSET <- 500 # Can be modified, but then script would need to be modified to handle computational load
 N_ITER <- 150  # can raise to 15000
 BURN_IN <- 20  # can raise to 2000
 
@@ -78,75 +77,45 @@ tryCatch({
 # CROSS-VALIDATION SETUP
 # =============================================================================
 
-# CV3 cross-validation setup
+# One example run of CV3 setup
 write_log("Setting up CV3 cross-validation...", log_file)
 
-# Get unique genotypes and environments
-geno_ori <- unique(pheno_data$Geno_n)
-env_ori <- unique(pheno_data$Env_n)
-
-# Subset for debugging
-set.seed(RANDOM_SEED)
-sampled_geno <- sample(geno_ori, min(N_GENO_SUBSET, length(geno_ori)))
-sampled_envs <- sample(env_ori, min(N_ENV_SUBSET, length(env_ori)))
-
-# Create indexed phenotype data
+# Define data
 pheno_data_idx <- pheno_data %>%
-  filter(Env_n %in% sampled_envs, Geno_n %in% sampled_geno) %>%
-  mutate(idx_cv = row_number()) 
-
-# Genotype and environment lists
-geno <- unique(pheno_data_idx$Geno_n)
-ngeno <- length(geno)
-env <- unique(pheno_data_idx$Env_n)
-nenv <- length(env)
-
-# Sample test genotypes
-test_geno <- as.vector(geno[sample(1:ngeno, round(TEST_PROPORTION * ngeno))])
-
-# Get test environments based on test genotype distribution
-test_geno_dist <- pheno_data_idx %>% 
-  filter(Geno_n %in% test_geno) %>% 
+  mutate(idx_cv = row_number())
+  
+geno_dist <- pheno_data_idx %>%
   count(Env_n) %>%
   arrange(desc(n)) %>%
-  filter(n > (0.05 * length(test_geno)))
+  filter(n > 1000) # 18 environments
 
-target_test_env <- test_geno_dist %>% pull(Env_n)
-n_target_test_env <- length(target_test_env)
-test_env <- as.vector(target_test_env[sample(1:n_target_test_env, min(round(TEST_PROPORTION * nenv), n_target_test_env))])
+env <- geno_dist %>% pull(Env_n)
+geno <- pheno_data_idx %>%
+  filter(Env_n %in% geno_dist$Env_n) %>%
+  distinct(Geno_n) %>%
+  slice_sample(n = N_GENO_SUBSET) %>%
+  pull(Geno_n) %>%
+  as.vector()
 
-# Define training sets
-train_geno <- setdiff(geno, test_geno)
-train_env <- setdiff(env, test_env)
+test_geno <- sample(geno, round(TEST_PROPORTION*length(geno)))
+train_geno <- setdiff(geno, test_geno) 
 
-# Create CV3 split indices
-train_indices <- pheno_data_idx %>%
-  filter(Geno_n %in% train_geno & Env_n %in% train_env) %>%
-  pull(idx_cv)
+test_set <- pheno_data_idx %>%
+  filter(Env_n %in% env, Geno_n %in% test_geno) %>%
+  mutate(set = "test") # should have atleast 50 genotypes per environment
 
-test_indices <- pheno_data_idx %>%
-  filter(Geno_n %in% test_geno & Env_n %in% train_env) %>%
-  pull(idx_cv)
+train_set <- pheno_data_idx %>%
+  filter(Env_n %in% env, Geno_n %in% train_geno) %>%
+  mutate(set = "train")
 
-# Prepare final dataset with CV splits
-pheno_data_idx <- pheno_data_idx %>%
-  mutate(
-    set = case_when(
-      idx_cv %in% train_indices ~ "train",
-      idx_cv %in% test_indices ~ "test",
-      TRUE ~ "unused"
-    )
-  ) %>%
-  filter(set != "unused") %>%
-  mutate(observed = ifelse(set == "train", BLUEs_wtn, NA)) %>%
-  arrange(Env_n, Geno_n)
+pred_data <- train_set %>%
+  bind_rows(test_set) %>%
+  select(-idx_cv) %>%
+  arrange(Env_n, Geno_n) %>%
+  mutate(observed = ifelse(set == "test", NA, BLUEs_wtn))
 
-# Update genotype and environment lists
-geno <- unique(pheno_data_idx$Geno_n)
-env <- unique(pheno_data_idx$Env_n)
-
-write_log(paste("Training set:", length(train_indices), "observations"), log_file)
-write_log(paste("Test set:", length(test_indices), "observations"), log_file)
+write_log(paste("Training set:", nrow(train_set), "observations"), log_file)
+write_log(paste("Test set:", nrow(test_set), "observations"), log_file)
 
 # =============================================================================
 # HELPER FUNCTIONS
@@ -176,8 +145,8 @@ create_eigen_Z <- function(Z_base, K_matrix, threshold = 1e-8) {
 write_log("Creating ETA components...", log_file)
 
 # Basic incidence matrices
-Z_e <- model.matrix(~ -1 + Env_n, data = pheno_data_idx)
-Z_g <- model.matrix(~ -1 + Geno_n, data = pheno_data_idx)
+Z_e <- model.matrix(~ -1 + Env_n, data = pred_data)
+Z_g <- model.matrix(~ -1 + Geno_n, data = pred_data)
 
 # Genomic relationship matrices
 geno_add_final <- geno_add[geno, ]
@@ -293,10 +262,10 @@ model_specifications <- list(
 )
 
 # Clean up - keep config, functions, final data, and model specifications
-rm(list = setdiff(ls(), c("project_path", "PREDICTION_TYPE", "TEST_PROPORTION", "RANDOM_SEED", 
-                          "N_ITER", "BURN_IN", "THIN", "N_GENO_SUBSET", 
-                          "N_ENV_SUBSET", "log_file", "write_log",
-                          "pheno_data_idx", "model_specifications")))
+rm(list = setdiff(ls(), c("project_path", "PREDICTION_TYPE", "RANDOM_SEED", 
+                          "N_ITER", "BURN_IN", "THIN", 
+                          "log_file", "write_log",
+                          "pred_data", "model_specifications")))
 
 # =============================================================================
 # MODEL FITTING FUNCTION
@@ -328,7 +297,7 @@ fit_model <- function(ETA_list, model_name, pheno_data_subset,
   # Calculate accuracy by type
   accuracy <- results %>% 
     filter(set == "test") %>%
-    group_by(Series, Type) %>% 
+    group_by(Env_n, Type) %>% 
     summarize(accuracy = cor(BLUEs_wtn, predicted, use = "complete.obs"), .groups = "drop") %>%
     group_by(Type) %>%
     summarize(accuracy_mean = mean(accuracy), .groups = "drop") %>%
@@ -355,7 +324,7 @@ write_log("Running models...", log_file)
 model1_output <- fit_model(
   model_name = "M1",
   ETA_list = model_specifications$M1$eta,
-  pheno_data_subset = pheno_data_idx,
+  pheno_data_subset = pred_data,
   n_iter = N_ITER,
   burn_in = BURN_IN,
   thin = THIN,
@@ -368,7 +337,7 @@ model1_output <- fit_model(
 model6_output <- fit_model(
   model_name = "M6",
   ETA_list = model_specifications$M6$eta,
-  pheno_data_subset = pheno_data_idx,
+  pheno_data_subset = pred_data,
   n_iter = N_ITER,
   burn_in = BURN_IN,
   thin = THIN,
