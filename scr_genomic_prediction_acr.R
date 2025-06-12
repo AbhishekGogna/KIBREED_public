@@ -13,6 +13,12 @@ library(AGHmatrix)
 # CONFIGURATION PARAMETERS
 # =============================================================================
 
+if (dir.exists("/proj")) {
+  project_path <- "/proj"
+} else {
+  project_path <- getwd() # assumes that this script is run from KIBREED_public
+}
+
 PREDICTION_TYPE <- "acr"  # across environments
 TEST_PROPORTION <- 0.2
 RANDOM_SEED <- 123
@@ -27,16 +33,17 @@ BURN_IN <- 20  # can raise to 2000
 # SETUP AND INITIALIZATION
 # =============================================================================
 
-# Create directories
+# Create directories relative to project_path
 dirs_to_create <- c("results", "tmp", "logs")
 for (dir in dirs_to_create) {
-  if (!dir.exists(dir)) {
-    dir.create(dir, recursive = TRUE)
+  dir_path <- file.path(project_path, dir)
+  if (!dir.exists(dir_path)) {
+    dir.create(dir_path, recursive = TRUE)
   }
 }
 
 # Set up logging
-log_file <- paste0("logs/genomic_prediction_", PREDICTION_TYPE, ".log")
+log_file <- file.path(project_path, "logs", paste0("genomic_prediction_", PREDICTION_TYPE, ".log"))
 
 write_log <- function(message, log_file_path, append = TRUE) {
   timestamp <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
@@ -54,9 +61,9 @@ write_log("Starting G×E genomic prediction analysis for WTN", log_file, append 
 write_log("Loading data files...", log_file)
 
 tryCatch({
-  pheno_data <- qread(paste0("data/pheno_", PREDICTION_TYPE, ".qs"))
-  geno_add <- qread("data/g_data_add.qs")
-  geno_dom <- qread("data/g_data_dom.qs")
+  pheno_data <- qread(file.path(project_path, "data", paste0("pheno_", PREDICTION_TYPE, ".qs")))
+  geno_add <- qread(file.path(project_path, "data", "g_data_add.qs"))
+  geno_dom <- qread(file.path(project_path, "data", "g_data_dom.qs"))
   
   write_log(paste("Loaded phenotype data:", nrow(pheno_data), "observations"), log_file)
   write_log(paste("Loaded genomic data:", nrow(geno_add), "genotypes x", ncol(geno_add), "markers"), log_file)
@@ -124,7 +131,7 @@ G_dom <- YY_t / mean(diag(YY_t))
 G_epi <- G_add * G_add
 
 # Clean up - keep config, functions, final data, and kinship matrices
-rm(list = setdiff(ls(), c("PREDICTION_TYPE", "TEST_PROPORTION", "RANDOM_SEED", 
+rm(list = setdiff(ls(), c("project_path", "PREDICTION_TYPE", "TEST_PROPORTION", "RANDOM_SEED", 
                           "N_ITER", "BURN_IN", "THIN", 
                           "N_GENO_SUBSET", "log_file", "write_log",
                           "pheno_final", "G_add", "G_dom", "G_epi")))
@@ -135,7 +142,7 @@ rm(list = setdiff(ls(), c("PREDICTION_TYPE", "TEST_PROPORTION", "RANDOM_SEED",
 
 # Model fitting function
 fit_model <- function(ETA_list, model_name, pheno_data_subset, 
-                      n_iter, burn_in, thin, prediction_type, log_file_path) {
+                      n_iter, burn_in, thin, prediction_type, log_file_path, project_path) {
   
   write_log(paste("Fitting", model_name), log_file_path)
   
@@ -146,7 +153,7 @@ fit_model <- function(ETA_list, model_name, pheno_data_subset,
     nIter = n_iter,
     burnIn = burn_in,
     thin = thin,
-    saveAt = paste0("tmp/", prediction_type, "_", model_name, "_"),
+    saveAt = file.path(project_path, "tmp", paste0(prediction_type, "_", model_name, "_")),
     verbose = FALSE
   )
   t1 <- Sys.time()
@@ -193,7 +200,8 @@ model1_output <- fit_model(
   burn_in = BURN_IN,
   thin = THIN,
   prediction_type = PREDICTION_TYPE,
-  log_file_path = log_file
+  log_file_path = log_file,
+  project_path = project_path
 )
 
 # Model 2: Additive + Dominance + Epistatic
@@ -211,7 +219,8 @@ model2_output <- fit_model(
   burn_in = BURN_IN,
   thin = THIN,
   prediction_type = PREDICTION_TYPE,
-  log_file_path = log_file
+  log_file_path = log_file,
+  project_path = project_path
 )
 
 # =============================================================================
@@ -225,8 +234,8 @@ all_accuracy <- rbind(
   cbind(model2_output$accuracy, model = "M2_complex", prediction_type = PREDICTION_TYPE)
 )
 
-results_file <- paste0("results/prediction_results_", PREDICTION_TYPE, ".qs")
-accuracy_file <- paste0("results/accuracy_summary_", PREDICTION_TYPE, ".qs")
+results_file <- file.path(project_path, "results", paste0("prediction_results_", PREDICTION_TYPE, ".qs"))
+accuracy_file <- file.path(project_path, "results", paste0("accuracy_summary_", PREDICTION_TYPE, ".qs"))
 
 qsave(all_results, results_file)
 qsave(all_accuracy, accuracy_file)
@@ -234,7 +243,7 @@ qsave(all_accuracy, accuracy_file)
 write_log("Analysis completed", log_file)
 
 # Clean up temporary files
-temp_files <- list.files("tmp", pattern = paste0(PREDICTION_TYPE, "_"), full.names = TRUE)
+temp_files <- list.files(file.path(project_path, "tmp"), pattern = paste0(PREDICTION_TYPE, "_"), full.names = TRUE)
 if (length(temp_files) > 0) {
   file.remove(temp_files)
 }
