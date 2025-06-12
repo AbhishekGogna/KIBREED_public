@@ -8,6 +8,7 @@ library(BGLR)
 library(qs)
 library(dplyr)
 library(AGHmatrix)
+library(feather)
 
 # =============================================================================
 # CONFIGURATION PARAMETERS
@@ -68,6 +69,7 @@ tryCatch({
   
   write_log(paste("Loaded phenotype data:", nrow(pheno_data), "observations"), log_file)
   write_log(paste("Loaded genomic data:", nrow(geno_add), "genotypes x", ncol(geno_add), "markers"), log_file)
+  write_log(paste("Loaded ev data:", nrow(ev_data), "environments x", ncol(ev_data), "variables"), log_file)
 }, error = function(e) {
   write_log(paste("ERROR loading data:", e$message), log_file)
   stop("Data loading failed")
@@ -78,7 +80,6 @@ tryCatch({
 # =============================================================================
 
 # One example run of CV3 setup
-write_log("Setting up CV3 cross-validation...", log_file)
 
 # Define data
 pheno_data_idx <- pheno_data %>%
@@ -147,10 +148,12 @@ write_log("Creating ETA components...", log_file)
 # Basic incidence matrices
 Z_e <- model.matrix(~ -1 + Env_n, data = pred_data)
 Z_g <- model.matrix(~ -1 + Geno_n, data = pred_data)
+env_order <- gsub("Env_n", "", (colnames(Z_e)))
+geno_order <- gsub("Geno_n", "", (colnames(Z_g)))
 
 # Genomic relationship matrices
-geno_add_final <- geno_add[geno, ]
-geno_dom_final <- geno_dom[geno, ]
+geno_add_final <- geno_add[geno_order, ]
+geno_dom_final <- geno_dom[geno_order, ]
 
 # Additive kinship matrix
 G_add <- Gmatrix(geno_add_final, method = "VanRaden", integer = FALSE)
@@ -304,7 +307,8 @@ rm(list = setdiff(ls(), c("project_path", "PREDICTION_TYPE", "RANDOM_SEED",
 
 # Model fitting function
 fit_model <- function(ETA_list, model_name, pheno_data_subset, 
-                      n_iter, burn_in, thin, prediction_type, log_file_path, project_path) {
+                      n_iter, burn_in, thin, prediction_type, 
+                      log_file_path, project_path) {
   
   write_log(paste("Fitting", model_name), log_file_path)
   
@@ -351,7 +355,7 @@ fit_model <- function(ETA_list, model_name, pheno_data_subset,
 # Run example models
 write_log("Running models...", log_file)
 
-# Run Model 1 (simplest)
+# Run Model 1
 model1_output <- fit_model(
   model_name = "M1",
   ETA_list = model_specifications$M1$eta,
@@ -364,7 +368,7 @@ model1_output <- fit_model(
   project_path = project_path
 )
 
-# Run Model 6 (most complex)
+# Run Model 6
 model6_output <- fit_model(
   model_name = "M6",
   ETA_list = model_specifications$M6$eta,

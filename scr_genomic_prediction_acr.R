@@ -53,7 +53,7 @@ write_log <- function(message, log_file_path, append = TRUE) {
   cat(log_entry, "\n")
 }
 
-write_log("Starting G×E genomic prediction analysis for WTN", log_file, append = FALSE)
+write_log("Starting G×E genomic prediction analysis for ACR", log_file, append = FALSE)
 
 # =============================================================================
 # DATA LOADING
