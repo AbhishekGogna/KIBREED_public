@@ -50,8 +50,8 @@ Once completed, your R environment will be automatically activated when you star
 
 | Guide | Description |
 |-------|-------------|
-| **[R Statistical Analysis](docs/r_analysis.md)** | Traditional genomic prediction using R/BGLR |
-| **[Python CNN Analysis](docs/py_analysis.md)** | Deep learning genomic prediction with TensorFlow |
+| **[GBLUP-based models](docs/r_analysis.md)** | Traditional genomic prediction using R/BGLR |
+| **[CNN-based models](docs/py_analysis.md)** | Deep learning genomic prediction with TensorFlow |
 
 ## Data Requirements
 
