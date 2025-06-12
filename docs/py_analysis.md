@@ -61,14 +61,6 @@ results/CNN/
 └── wtn/                     # Similar structure for within-environment
 ```
 
-## CNN Features
-
-- **Hyperparameter Optimization:** Automatic tuning of learning rate, batch size, network architecture
-- **Early Stopping:** Prevents overfitting with validation monitoring
-- **Model Persistence:** Saves best models for reuse and deployment
-- **Comprehensive Logging:** Detailed logs for reproducibility and debugging
-- **Scalable:** Handles both small and large genomic datasets efficiently
-
 ## Data Requirements for Python Scripts
 
 Python scripts expect the following data files in the `data/` directory:
