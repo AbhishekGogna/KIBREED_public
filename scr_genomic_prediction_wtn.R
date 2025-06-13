@@ -332,9 +332,9 @@ fit_model <- function(ETA_list, model_name, pheno_data_subset,
   # Calculate accuracy by type
   accuracy <- results %>% 
     filter(set == "test") %>%
-    group_by(Env_n, Type) %>% 
+    group_by(model_name, Env_n, Type) %>% 
     summarize(accuracy = cor(BLUEs_wtn, predicted, use = "complete.obs"), .groups = "drop") %>%
-    group_by(Type) %>%
+    group_by(model_name, Type) %>%
     summarize(accuracy_mean = mean(accuracy), .groups = "drop") %>%
     as.data.frame()
   
@@ -342,7 +342,7 @@ fit_model <- function(ETA_list, model_name, pheno_data_subset,
   write_log(paste(model_name, "completed in", runtime, "minutes"), log_file_path)
   
   for (i in 1:nrow(accuracy)) {
-    write_log(paste(model_name, accuracy$Type[i], "accuracy:", round(accuracy$accuracy[i], 3)), log_file_path)
+    write_log(paste(model_name, accuracy$Type[i], "accuracy:", round(accuracy$accuracy_mean[i], 3)), log_file_path)
   }
   
   return(list(results = results, accuracy = accuracy, model = model))
@@ -352,56 +352,58 @@ fit_model <- function(ETA_list, model_name, pheno_data_subset,
 # RUN MODELS
 # =============================================================================
 
-# Run example models
-write_log("Running models...", log_file)
+# Define model names to run
+model_names <- paste0("M", c(1, 3, 6))
 
-# Run Model 1
-model1_output <- fit_model(
-  model_name = "M1",
-  ETA_list = model_specifications$M1$eta,
-  pheno_data_subset = pred_data,
-  n_iter = N_ITER,
-  burn_in = BURN_IN,
-  thin = THIN,
-  prediction_type = PREDICTION_TYPE,
-  log_file_path = log_file,
-  project_path = project_path
-)
+# Run all models using lapply
+model_outputs <- lapply(model_names, function(model_name) {
+  write_log(paste("Starting", model_name), log_file)
+  
+  model_output <- fit_model(
+    model_name = model_name,
+    ETA_list = model_specifications[[model_name]]$eta,
+    pheno_data_subset = pred_data,
+    n_iter = N_ITER,
+    burn_in = BURN_IN,
+    thin = THIN,
+    prediction_type = PREDICTION_TYPE,
+    log_file_path = log_file,
+    project_path = project_path
+  )
+  
+  write_log(paste("Completed", model_name), log_file)
+  return(model_output)
+}) # results will vary since the code only shows the overall pipeline
 
-# Run Model 6
-model6_output <- fit_model(
-  model_name = "M6",
-  ETA_list = model_specifications$M6$eta,
-  pheno_data_subset = pred_data,
-  n_iter = N_ITER,
-  burn_in = BURN_IN,
-  thin = THIN,
-  prediction_type = PREDICTION_TYPE,
-  log_file_path = log_file,
-  project_path = project_path
-)
+# Name the list elements for easy access
+names(model_outputs) <- model_names
 
 # =============================================================================
 # SAVE RESULTS
 # =============================================================================
 
-# Combine all results
-all_results <- rbind(model1_output$results, model6_output$results)
-all_accuracy <- rbind(
-  cbind(model1_output$accuracy, model = "M1_basic", prediction_type = PREDICTION_TYPE),
-  cbind(model6_output$accuracy, model = "M6_complex", prediction_type = PREDICTION_TYPE)
-)
+# Combine all results from all models
+all_results <- do.call(rbind, lapply(names(model_outputs), function(model_name) {
+  model_outputs[[model_name]]$results
+}))
 
+# Create accuracy summary - model name already in accuracy data frame
+all_accuracy <- do.call(rbind, lapply(model_names, function(model_name) {
+  model_outputs[[model_name]]$accuracy
+}))
+
+# Save results
 results_file <- file.path(project_path, "results", paste0("prediction_results_", PREDICTION_TYPE, ".qs"))
 accuracy_file <- file.path(project_path, "results", paste0("accuracy_summary_", PREDICTION_TYPE, ".qs"))
-
 qsave(all_results, results_file)
 qsave(all_accuracy, accuracy_file)
 
 write_log("Analysis completed", log_file)
 
 # Clean up temporary files
-temp_files <- list.files(file.path(project_path, "tmp"), pattern = paste0(PREDICTION_TYPE, "_"), full.names = TRUE)
+temp_files <- list.files(file.path(project_path, "tmp"), 
+                         pattern = paste0(PREDICTION_TYPE, "_"), 
+                         full.names = TRUE)
 if (length(temp_files) > 0) {
   file.remove(temp_files)
 }
