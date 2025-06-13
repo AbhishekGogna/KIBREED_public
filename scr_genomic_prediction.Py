@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # CNN Genomic Prediction Script - Standalone Version
 
 # Import utilities and libraries
