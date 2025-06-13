@@ -6,6 +6,14 @@ def scale_data(to_transform, pd_cols, pd_index):
     data_scaled_df = pd.DataFrame(data_scaled, columns = pd_cols, index = pd_index)
     return data_scaled_df, scaler
 
+def inverse_scale(scaler, myyield_tanh, verbose):
+    #undo scaling
+    myyield_tanh_inv = scaler.inverse_transform(myyield_tanh.reshape(-1, 1))
+    myyield_tanh_inv = myyield_tanh_inv.flatten()
+    if verbose:
+        print(scaler, myyield_tanh.shape, myyield_tanh_inv.shape, myyield_tanh_inv.max(), myyield_tanh_inv.min(), myyield_tanh_inv.mean())
+    return myyield_tanh_inv
+
 def read_json(path):
     with open(path, encoding = "utf8") as json_file:
         data = json.load(json_file)
