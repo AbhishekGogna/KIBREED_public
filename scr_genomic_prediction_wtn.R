@@ -103,17 +103,17 @@ train_geno <- setdiff(geno, test_geno)
 
 test_set <- pheno_data_idx %>%
   filter(Env_n %in% env, Geno_n %in% test_geno) %>%
-  mutate(set = "test") # should have atleast 50 genotypes per environment
+  mutate(set = "Test") # should have atleast 50 genotypes per environment
 
 train_set <- pheno_data_idx %>%
   filter(Env_n %in% env, Geno_n %in% train_geno) %>%
-  mutate(set = "train")
+  mutate(set = "Train")
 
 pred_data <- train_set %>%
   bind_rows(test_set) %>%
   select(-idx_cv) %>%
   arrange(Env_n, Geno_n) %>%
-  mutate(observed = ifelse(set == "test", NA, BLUEs_wtn))
+  mutate(observed = ifelse(set == "Test", NA, BLUEs_wtn))
 
 write_log(paste("Training set:", nrow(train_set), "observations"), log_file)
 write_log(paste("Test set:", nrow(test_set), "observations"), log_file)
@@ -331,7 +331,7 @@ fit_model <- function(ETA_list, model_name, pheno_data_subset,
   
   # Calculate accuracy by type
   accuracy <- results %>% 
-    filter(set == "test") %>%
+    filter(set == "Test") %>%
     group_by(model_name, Env_n, Type) %>% 
     summarize(accuracy = cor(BLUEs_wtn, predicted, use = "complete.obs"), .groups = "drop") %>%
     group_by(model_name, Type) %>%
