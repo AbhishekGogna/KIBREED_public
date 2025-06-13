@@ -6,6 +6,17 @@ def scale_data(to_transform, pd_cols, pd_index):
     data_scaled_df = pd.DataFrame(data_scaled, columns = pd_cols, index = pd_index)
     return data_scaled_df, scaler
 
+def read_json(path):
+    with open(path, encoding = "utf8") as json_file:
+        data = json.load(json_file)
+    return data
+
+def write_json(data, path, verbose = False):
+    with open(path, "w") as fp:   
+        json.dump(data, fp)
+    if verbose:
+        return print("Done")
+
 def create_train_val_data(index_train, index_test, index_val = None, prop = 0.1):
     if index_val is None:
         val_set = random.sample(index_train, int(len(index_train)*prop)) # cretes validation set from the remaining non_test set 
