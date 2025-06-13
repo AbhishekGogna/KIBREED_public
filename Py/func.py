@@ -137,6 +137,50 @@ def CNN_net_flex(hp, model_name, base_layer, max_layer, n_in = None, ec_layer = 
     CNN_output = Flatten(name=f'CNN_{model_name}_flat')(CNN)
     return model_input, CNN_output
 
+def dense_post_concat(hp, inputs, concatenated_model, base_layer = 6, max_layer = 5, dp_rate = 0.2, tuning = False):
+    # define layer inputs
+    layer_units = [(2)**(x+1) if x == 0 else 2**(x) for x in range(base_layer, base_layer + max_layer, 1)][::-1] # 6 layers
+    dp_rate = 0.2 * np.ones(max_layer)
+    
+    if tuning:
+        layer_units = [tuner_obj_int(hp, f'u_den_{x}', x) for x in layer_units]
+        dp_rate = [hp.Float(f'dp_for_l_{layer_units[x]}', min_value=0.1, max_value=0.5, step = 0.01, default = dp_rate[x]) for x in range(len(dp_rate))]
+    
+    # define first layer
+    model_concat = Dense(units = layer_units[0],
+                         activation ='relu', 
+                         name = f'concat_fl')(concatenated_model) # dense layer
+    model_concat = Dropout(rate = dp_rate[0], 
+                           name = f'concat_drop_fl')(model_concat) # dropout layer
+    
+    # define variable layers
+    for i in range(len(layer_units[1:])):
+        model_concat = Dense(units = layer_units[1:][i], 
+                             activation ='relu', 
+                             name = f'concat_vl_{i}')(model_concat) # dense layer
+        model_concat = Dropout(rate = dp_rate[1:][i], 
+                               name = f'concat_drop_vl_{i}')(model_concat) # dropout layer
+    
+    # define output layers
+    model_concat_out = Dense(1, activation='relu',name="concat_out")(model_concat) # 1 unit since its a regression model
+    
+    # compile model
+    compiled_model = Model(inputs=inputs, outputs = model_concat_out)
+    compiled_model.compile(loss = 'mean_absolute_error',
+                           optimizer = Adam(learning_rate = hp.Float("compile_l_rate",
+                                                                     min_value=1e-5,
+                                                                     max_value=1e-2,
+                                                                     sampling="log"), #lr
+                                            beta_1 = hp.Float("compile_beta_val_1",
+                                                              min_value=0,
+                                                              max_value=1), #beta1
+                                            beta_2 = hp.Float("compile_beta_val_2",
+                                                              min_value=0,
+                                                              max_value=1)), # beta2
+                           metrics = ['mean_squared_error'])
+    # produce output
+    return compiled_model
+
 def fit_model(final_model, params, train_x, val_x, train_y, val_y):
      
     # set variables
