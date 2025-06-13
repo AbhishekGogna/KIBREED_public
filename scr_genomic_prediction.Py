@@ -53,7 +53,7 @@ logger.info(f"Selected model: {model_name}")
 # Model parameters (dummy configuration)
 model_inputs = {
     "acr_CNN": {"tune": True},
-    "wtn_CNN_EC": {"tune": True}
+    "CNN_EV": {"tune": True}
 }
 tune = model_inputs[model_name]["tune"]
 
