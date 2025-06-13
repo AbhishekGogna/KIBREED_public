@@ -50,15 +50,6 @@ model = importlib.import_module(f'Py.model_{model_name}')
 
 logger.info(f"Selected model: {model_name}")
 
-# Model parameters (dummy configuration)
-model_inputs = {
-    "acr_CNN": {"tune": True},
-    "CNN_EV": {"tune": True}
-}
-tune = model_inputs[model_name]["tune"]
-
-logger.info(f"Model tuning enabled: {tune}")
-
 # =============================================================================
 # DIRECTORY SETUP
 # =============================================================================
@@ -217,8 +208,7 @@ elif PREDICTION_TYPE == "wtn":
    val_x = [val_data[2], val_data[1]]
    test_x = [test_data[2], test_data[1]]
    model_tuner = model.tuner(marker_n=train_x[0].shape[1], # number of markers
-                             ec_n=train_x[1].shape[1],
-                             tune=tune)
+                             ec_n=train_x[1].shape[1])
 
 # =============================================================================
 # HYPERPARAMETER TUNING
