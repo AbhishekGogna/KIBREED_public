@@ -376,10 +376,25 @@ if temp_files:
 logger.info("Analysis completed successfully")
 
 # Create a compact correlation summary
-correlations_by_type = (pred_vals_test.groupby('Type')
-                       .apply(lambda x: x['obs'].corr(x['pred']).round(2))
-                       .reset_index()
-                       .rename(columns={0: 'correlation'}))
+if PREDICTION_TYPE == "wtn":
+   # Within environments - group by Env_n and Type
+   within_env_corr = (pred_vals_test.groupby(['Env_n', 'Type'])
+                      .apply(lambda x: x['obs'].corr(x['pred']).round(2))
+                      .reset_index()
+                      .rename(columns={0: 'correlation'}))
+   
+   # Mean across environments - group by Type and take mean of correlations
+   correlations_by_type = (within_env_corr.groupby('Type')['correlation']
+                      .mean()
+                      .round(2)
+                      .reset_index())
+
+elif PREDICTION_TYPE == "acr":
+   correlations_by_type = (pred_vals_test.groupby('Type')
+                          .apply(lambda x: x['obs'].corr(x['pred']).round(2))
+                          .reset_index()
+                          .rename(columns={0: 'correlation'}))
+                          
 correlation_text = "; ".join([f"{row['Type']}: {row['correlation']}" 
                              for _, row in correlations_by_type.iterrows()])
 
