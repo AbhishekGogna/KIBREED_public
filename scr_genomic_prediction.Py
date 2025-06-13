@@ -160,7 +160,7 @@ try:
         # Load environmental data for WTN (optional)
         ev_path = os.path.join(results_dir, "ev_data_wtn.feather")
         try:
-            ev_df = pd.read_feather(ev_path)
+            ev_df = pd.read_feather(ev_path).set_index('idx')
             ev_data = np.stack([ev_df[ev_df.index == idx].iloc[0,:].values for idx in p_data['Env_n']])
             ev_data_cv = ev_data.reshape(ev_data.shape[0], ev_data.shape[1], 1)
             logger.info(f"Environmental data loaded: {ev_df.shape[0]} x {ev_df.shape[1]}")
