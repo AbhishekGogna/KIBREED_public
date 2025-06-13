@@ -20,7 +20,7 @@ from Py.func import *
 # =============================================================================
 
 # Setup logging early
-logs_at = os.path.join(project_path, "results", "CNN", "predictions.log")
+logs_at = os.path.join(project_path, "logs", "genomic_predictions_cnn.log")
 os.makedirs(os.path.dirname(logs_at), exist_ok=True)
 
 logging.basicConfig(filename=logs_at, level=logging.DEBUG, filemode='w')
@@ -76,7 +76,7 @@ callback_dir = os.path.join(base_dir, "callback_data")
 tb_cb = os.path.join(callback_dir, "tb_cb")
 mc_cb = os.path.join(callback_dir, "mc_cb", "model.ckpt")
 tb_cb_tuning = os.path.join(callback_dir, "tb_cb_tuning")
-tuning_save_at = base_dir
+tuning_save_at = tmp_at # will be deleted since it takes a lot of space
 tune_dir = f"{model_name}/hp_tuning"
 tuned_model_at = os.path.join(base_dir, "model", "model_tuned")
 model_save_at = os.path.join(base_dir, "model", "model_fitted")
@@ -342,6 +342,14 @@ else:
 # PREDICTIONS AND EXPORT
 # =============================================================================
 
+def inverse_scale(scaler, myyield_tanh, verbose):
+    #undo scaling
+    myyield_tanh_inv = scaler.inverse_transform(myyield_tanh.reshape(-1, 1))
+    myyield_tanh_inv = myyield_tanh_inv.flatten()
+    if verbose:
+        print(scaler, myyield_tanh.shape, myyield_tanh_inv.shape, myyield_tanh_inv.max(), myyield_tanh_inv.min(), myyield_tanh_inv.mean())
+    return myyield_tanh_inv
+
 logger.info("Making predictions...")
 
 # Generate predictions
@@ -350,7 +358,7 @@ pred_vals_test = predict_values(
     test_x=test_x,
     test_y=test_y,
     index=test_set,
-    scaler=scaler_p
+    scaler=p_scl
 )
 
 # Merge with phenotype data
@@ -377,3 +385,13 @@ if temp_files:
     logger.info(f"Cleaned up {len(temp_files)} temporary files")
 
 logger.info("Analysis completed successfully")
+
+# Create a compact correlation summary
+correlations_by_type = (pred_vals_test.groupby('Type')
+                       .apply(lambda x: x['obs'].corr(x['pred']).round(2))
+                       .reset_index()
+                       .rename(columns={0: 'correlation'}))
+correlation_text = "; ".join([f"{row['Type']}: {row['correlation']}" 
+                             for _, row in correlations_by_type.iterrows()])
+
+logger.info(f"Analysis completed successfully - Correlations by type: {correlation_text}")
