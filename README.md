@@ -2,7 +2,7 @@
 
 [![DOI](https://zenodo.org/badge/990447884.svg)](https://doi.org/10.5281/zenodo.17737517)
 
-A genomic prediction project for plant breeding applications using both **R statistical models** and **Python deep learning (CNN)** approaches with specific version requirements.
+A genomic prediction project for plant breeding applications using both **R statistical models** and **Python deep learning (CNN)** approaches.
 
 ## Prerequisites
 
