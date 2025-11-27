@@ -60,3 +60,6 @@ Both R and Python scripts expect specific data files in the `data/` directory. S
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for full details.
+
+[![DOI](https://zenodo.org/badge/990447884.svg)](https://doi.org/10.5281/zenodo.17737517)
+
